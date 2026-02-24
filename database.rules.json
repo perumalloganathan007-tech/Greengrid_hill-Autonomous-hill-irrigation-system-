@@ -1,0 +1,33 @@
+{
+  "rules": {
+    "terrace": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "tanks": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "pump": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "schedule": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "audit_logs": {
+      "$userId": {
+        ".read": "auth != null && (auth.uid == $userId || root.child('users').child(auth.uid).child('role').val() == 'admin')",
+        ".write": "auth != null",
+        "$timestamp": {
+          ".validate": "newData.hasChildren(['action', 'category', 'timestamp', 'userId'])"
+        }
+      }
+    },
+    "$other": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    }
+  }
+}

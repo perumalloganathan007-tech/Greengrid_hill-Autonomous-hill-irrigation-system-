@@ -22,14 +22,14 @@ class IrrigationSchedule extends Equatable {
 
   @override
   List<Object?> get props => [
-        scheduleId,
-        zone,
-        scheduleTimes,
-        isEnabled,
-        condition,
-        createdAt,
-        lastRun,
-      ];
+    scheduleId,
+    zone,
+    scheduleTimes,
+    isEnabled,
+    condition,
+    createdAt,
+    lastRun,
+  ];
 
   IrrigationSchedule copyWith({
     String? scheduleId,

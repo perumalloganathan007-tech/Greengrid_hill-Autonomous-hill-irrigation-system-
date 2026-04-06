@@ -34,6 +34,14 @@
 
   <title>greengridhill</title>
   <link rel="manifest" href="manifest.json">
+
+  <!-- Firebase SDKs -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+    import { getAuth } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+    import { getFirestore } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+    import { getDatabase } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js";
+  </script>
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>

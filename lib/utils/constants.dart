@@ -46,6 +46,8 @@ class AppConstants {
   static const List<String> pumpIds = [
     'pump_1',
     'pump_2',
+    'pump_3',
+    'pump_4',
   ];
   
   // SharedPreferences Keys

@@ -3,17 +3,22 @@ import 'package:syncfusion_flutter_charts/charts.dart';
 import '../../models/water_usage.dart';
 import '../../services/analytics_service.dart';
 import 'package:intl/intl.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 /// Analytics screen showing water usage charts and statistics
 class AnalyticsScreen extends StatefulWidget {
-  const AnalyticsScreen({super.key});
+  final String? userId;
+
+  const AnalyticsScreen({super.key, this.userId});
 
   @override
   State<AnalyticsScreen> createState() => _AnalyticsScreenState();
 }
 
 class _AnalyticsScreenState extends State<AnalyticsScreen> {
-  final AnalyticsService _analyticsService = AnalyticsService();
+  late final AnalyticsService _analyticsService = AnalyticsService(
+    userId: widget.userId ?? FirebaseAuth.instance.currentUser?.uid ?? 'test_user',
+  );
   List<WaterUsage> _weeklyData = [];
   bool _isLoading = true;
   String _selectedPeriod = 'Week';
@@ -70,12 +75,12 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
 
       if (mounted) {
         setState(() {
-          _weeklyData = data.isEmpty ? _generateDemoData() : data;
-          _totalUsed = totalUsed == 0 ? 2450 : totalUsed;
-          _totalSaved = totalSaved == 0 ? 1850 : totalSaved;
-          _efficiency = efficiency == 0 ? 43.0 : efficiency;
+          _weeklyData = data;
+          _totalUsed = totalUsed;
+          _totalSaved = totalSaved;
+          _efficiency = efficiency;
           _statistics = statistics.isEmpty 
-              ? {'average': 350.0, 'min': 250.0, 'max': 550.0, 'total': 2450.0}
+              ? {'average': 0.0, 'min': 0.0, 'max': 0.0, 'total': 0.0}
               : statistics;
           _trend = trend;
           _isLoading = false;
@@ -84,31 +89,17 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _weeklyData = _generateDemoData();
-          _totalUsed = 2450;
-          _totalSaved = 1850;
-          _efficiency = 43.0;
-          _statistics = {'average': 350.0, 'min': 250.0, 'max': 550.0, 'total': 2450.0};
-          _trend = 5.2;
+          _weeklyData = [];
+          _totalUsed = 0.0;
+          _totalSaved = 0.0;
+          _efficiency = 0.0;
+          _statistics = {'average': 0.0, 'min': 0.0, 'max': 0.0, 'total': 0.0};
+          _trend = 0.0;
           _isLoading = false;
         });
       }
     }
   }
-
-  List<WaterUsage> _generateDemoData() {
-    // Demo data for visualization
-    return List.generate(7, (index) {
-      return WaterUsage(
-        date: DateTime.now().subtract(Duration(days: 6 - index)),
-        litersUsed: 300 + (index * 50).toDouble(),
-        litersSaved: 200 + (index * 30).toDouble(),
-        activationCount: 3 + (index % 3),
-        averageMoisture: 45 + (index * 5).toDouble(),
-      );
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -128,19 +119,28 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                   children: [
                     _buildPeriodSelector(),
                     const SizedBox(height: 20),
-                    _buildStatisticsCards(),
-                    const SizedBox(height: 24),
-                    _buildSectionHeader('Water Conservation'),
-                    const SizedBox(height: 8),
-                    _buildSavingsChart(),
-                    const SizedBox(height: 24),
-                    _buildSectionHeader('Daily Usage Trend'),
-                    const SizedBox(height: 8),
-                    _buildUsageChart(),
-                    const SizedBox(height: 24),
-                    _buildSectionHeader('Irrigation Activity'),
-                    const SizedBox(height: 8),
-                    _buildActivationChart(),
+                    if (_weeklyData.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.all(32.0),
+                        child: Center(
+                          child: Text('Data is not initialized or no usage data found.'),
+                        ),
+                      )
+                    else ...[
+                      _buildStatisticsCards(),
+                      const SizedBox(height: 24),
+                      _buildSectionHeader('Water Conservation'),
+                      const SizedBox(height: 8),
+                      _buildSavingsChart(),
+                      const SizedBox(height: 24),
+                      _buildSectionHeader('Daily Usage Trend'),
+                      const SizedBox(height: 8),
+                      _buildUsageChart(),
+                      const SizedBox(height: 24),
+                      _buildSectionHeader('Irrigation Activity'),
+                      const SizedBox(height: 8),
+                      _buildActivationChart(),
+                    ],
                   ],
                 ),
               ),

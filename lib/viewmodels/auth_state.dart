@@ -39,10 +39,7 @@ class AuthError extends AuthState {
   final String message;
   final bool isUnauthenticated;
 
-  const AuthError({
-    required this.message,
-    this.isUnauthenticated = false,
-  });
+  const AuthError({required this.message, this.isUnauthenticated = false});
 
   @override
   List<Object?> get props => [message, isUnauthenticated];
@@ -63,10 +60,7 @@ class ProfileUpdated extends AuthState {
   final UserModel user;
   final String message;
 
-  const ProfileUpdated({
-    required this.user,
-    required this.message,
-  });
+  const ProfileUpdated({required this.user, required this.message});
 
   @override
   List<Object?> get props => [user, message];

@@ -28,8 +28,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       _esp32UrlController.text = prefs.getString('esp32_url') ?? 'http://192.168.1.100';
-      _notificationsEnabled = prefs.getBool('notifications') ?? true;
-      _autoModeEnabled = prefs.getBool('auto_mode') ?? true;
+      _notificationsEnabled = prefs.getBool('notifications_enabled') ?? true;
+      _autoModeEnabled = prefs.getBool('auto_mode_default') ?? true;
       _refreshInterval = prefs.getInt('refresh_interval') ?? 5;
       _selectedTheme = prefs.getString('theme_mode') ?? 'system';
     });
@@ -38,8 +38,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _saveSettings() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('esp32_url', _esp32UrlController.text);
-    await prefs.setBool('notifications', _notificationsEnabled);
-    await prefs.setBool('auto_mode', _autoModeEnabled);
+    await prefs.setBool('notifications_enabled', _notificationsEnabled);
+    await prefs.setBool('auto_mode_default', _autoModeEnabled);
     await prefs.setInt('refresh_interval', _refreshInterval);
     await prefs.setString('theme_mode', _selectedTheme);
 
@@ -95,7 +95,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           _buildSwitchTile(
             title: 'Auto Mode by Default',
-            subtitle: 'New pumps start in automatic mode',
+            subtitle: 'New valves start in automatic mode',
             value: _autoModeEnabled,
             icon: Icons.auto_mode,
             onChanged: (value) {

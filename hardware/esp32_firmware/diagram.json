@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "author": "Antigravity",
+  "editor": "wokwi",
+  "parts": [
+    { "type": "board-esp32-devkit-c-v4", "id": "esp", "top": 0, "left": 0, "attrs": {} },
+    { "type": "wokwi-led", "id": "pump1", "top": -50, "left": 150, "attrs": { "color": "blue", "label": "Pump 1" } },
+    { "type": "wokwi-led", "id": "pump2", "top": -50, "left": 200, "attrs": { "color": "blue", "label": "Pump 2" } },
+    { "type": "wokwi-led", "id": "pump3", "top": -100, "left": 150, "attrs": { "color": "blue", "label": "Pump 3" } },
+    { "type": "wokwi-led", "id": "pump4", "top": -100, "left": 200, "attrs": { "color": "blue", "label": "Pump 4" } },
+    { "type": "wokwi-potentiometer", "id": "moistA", "top": 150, "left": -150, "attrs": { "label": "Zone 1" } },
+    { "type": "wokwi-potentiometer", "id": "moistB", "top": 250, "left": -150, "attrs": { "label": "Zone 2" } },
+    { "type": "wokwi-potentiometer", "id": "moistC", "top": 350, "left": -150, "attrs": { "label": "Zone 3" } },
+    { "type": "wokwi-potentiometer", "id": "moistD", "top": 450, "left": -150, "attrs": { "label": "Zone 4" } },
+    { "type": "wokwi-hc-sr04", "id": "tankMain", "top": -150, "left": -100, "attrs": { "label": "Main Tank" } }
+  ],
+  "connections": [
+    [ "esp:TX", "$serialMonitor:RX", "", [] ],
+    [ "esp:RX", "$serialMonitor:TX", "", [] ],
+    
+    [ "esp:26", "pump1:A", "green", [ "v0" ] ],
+    [ "esp:GND.2", "pump1:C", "black", [ "v0", "h-20" ] ],
+    [ "esp:27", "pump2:A", "green", [ "v0" ] ],
+    [ "esp:GND.2", "pump2:C", "black", [ "v0", "h-20" ] ],
+    [ "esp:14", "pump3:A", "green", [ "v0" ] ],
+    [ "esp:GND.2", "pump3:C", "black", [ "v0", "h-20" ] ],
+    [ "esp:12", "pump4:A", "green", [ "v0" ] ],
+    [ "esp:GND.2", "pump4:C", "black", [ "v0", "h-20" ] ],
+    
+    [ "moistA:GND", "esp:GND.3", "black", [] ],
+    [ "moistA:VCC", "esp:3V3", "red", [] ],
+    [ "moistA:SIG", "esp:36", "blue", [] ],
+    [ "moistB:GND", "esp:GND.3", "black", [] ],
+    [ "moistB:VCC", "esp:3V3", "red", [] ],
+    [ "moistB:SIG", "esp:39", "blue", [] ],
+    [ "moistC:GND", "esp:GND.3", "black", [] ],
+    [ "moistC:VCC", "esp:3V3", "red", [] ],
+    [ "moistC:SIG", "esp:34", "blue", [] ],
+    [ "moistD:GND", "esp:GND.3", "black", [] ],
+    [ "moistD:VCC", "esp:3V3", "red", [] ],
+    [ "moistD:SIG", "esp:35", "blue", [] ],
+
+    [ "tankMain:VCC", "esp:3V3", "red", [] ],
+    [ "tankMain:GND", "esp:GND.1", "black", [] ],
+    [ "tankMain:TRIG", "esp:19", "orange", [] ],
+    [ "tankMain:ECHO", "esp:18", "yellow", [] ]
+  ],
+  "dependencies": {}
+}

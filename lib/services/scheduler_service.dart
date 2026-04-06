@@ -5,17 +5,20 @@ import '../models/irrigation_schedule.dart';
 import '../models/sensor_data.dart';
 import '../models/tank_level.dart';
 import 'control_service.dart';
+import 'cache_service.dart';
 
 /// Service for managing irrigation schedules
 class SchedulerService {
   static const String _schedulesKey = 'irrigation_schedules';
   final ControlService _controlService;
   Timer? _schedulerTimer;
-  final _scheduleUpdateController = StreamController<List<IrrigationSchedule>>.broadcast();
+  final _scheduleUpdateController =
+      StreamController<List<IrrigationSchedule>>.broadcast();
 
   SchedulerService(this._controlService);
 
-  Stream<List<IrrigationSchedule>> get scheduleUpdates => _scheduleUpdateController.stream;
+  Stream<List<IrrigationSchedule>> get scheduleUpdates =>
+      _scheduleUpdateController.stream;
 
   /// Initialize scheduler and start checking schedules
   Future<void> initialize() async {
@@ -50,7 +53,9 @@ class SchedulerService {
   /// Update existing schedule
   Future<void> updateSchedule(IrrigationSchedule schedule) async {
     final schedules = await getSchedules();
-    final index = schedules.indexWhere((s) => s.scheduleId == schedule.scheduleId);
+    final index = schedules.indexWhere(
+      (s) => s.scheduleId == schedule.scheduleId,
+    );
     if (index != -1) {
       schedules[index] = schedule;
       await _saveSchedules(schedules);
@@ -104,10 +109,16 @@ class SchedulerService {
     return time.daysOfWeek.contains(dayOfWeek);
   }
 
-  Future<void> _executeSchedule(IrrigationSchedule schedule, ScheduleTime time) async {
+  Future<void> _executeSchedule(
+    IrrigationSchedule schedule,
+    ScheduleTime time,
+  ) async {
     // Check conditions before running
     if (schedule.condition != null) {
-      final shouldRun = await _checkConditions(schedule.condition!, schedule.zone);
+      final shouldRun = await _checkConditions(
+        schedule.condition!,
+        schedule.zone,
+      );
       if (!shouldRun) return;
     }
 
@@ -127,11 +138,20 @@ class SchedulerService {
     await updateSchedule(updatedSchedule);
   }
 
-  Future<bool> _checkConditions(ScheduleCondition condition, String zone) async {
-    // In a real implementation, this would check actual sensor data
-    // For now, return true to allow execution
-    // TODO: Integrate with TelemetryService to check actual moisture and tank levels
-    return true;
+  Future<bool> _checkConditions(
+    ScheduleCondition condition,
+    String zone,
+  ) async {
+    final cacheService = CacheService();
+    final sensors = await cacheService.getCachedSensors() ?? [];
+    final tanks = await cacheService.getCachedTanks() ?? [];
+
+    return checkConditionMet(
+      condition: condition,
+      sensors: sensors,
+      tanks: tanks,
+      zone: zone,
+    );
   }
 
   Future<void> _saveSchedules(List<IrrigationSchedule> schedules) async {
@@ -153,17 +173,19 @@ class SchedulerService {
 
       case ConditionType.onlyIfDry:
         if (condition.moistureThreshold == null) return true;
-        
+
         // Find sensors for this zone
         final zoneSensors = sensors.where((s) => s.location.contains(zone));
         if (zoneSensors.isEmpty) return false;
-        
+
         // Check if any sensor is below threshold
-        return zoneSensors.any((s) => s.moistureLevel < condition.moistureThreshold!);
+        return zoneSensors.any(
+          (s) => s.moistureLevel < condition.moistureThreshold!,
+        );
 
       case ConditionType.skipIfTankLow:
         if (condition.tankMinLevel == null) return true;
-        
+
         // Check if any tank is above minimum level
         return tanks.any((t) => t.levelPercentage >= condition.tankMinLevel!);
     }

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'main_navigation.dart';
 
 /// Splash screen with app branding
 class SplashScreen extends StatefulWidget {
@@ -15,20 +14,10 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    // Show splash for 2 seconds then navigate to main app
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (_) => MainNavigation(onThemeChanged: widget.onThemeChanged),
-          ),
-        );
-      }
-    });
+    // AuthBloc is checking the state...
   }
 
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildSplashContent() {
     return Scaffold(
       backgroundColor: Colors.green[700],
       body: Center(
@@ -44,7 +33,7 @@ class _SplashScreenState extends State<SplashScreen> {
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.2),
+                    color: Colors.black.withValues(alpha: 0.2),
                     blurRadius: 10,
                     offset: const Offset(0, 5),
                   ),
@@ -83,5 +72,10 @@ class _SplashScreenState extends State<SplashScreen> {
         ),
       ),
     );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _buildSplashContent();
   }
 }

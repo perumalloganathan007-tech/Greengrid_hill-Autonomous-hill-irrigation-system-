@@ -3,14 +3,14 @@ import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, kIsWeb, TargetPlatform;
 
 /// Firebase configuration for GreenGrid Hill
-/// 
+///
 /// SETUP INSTRUCTIONS:
 /// 1. Go to https://console.firebase.google.com/
 /// 2. Create a new project named "greengrid-hill"
 /// 3. Add your app for each platform (Web, Android, iOS)
 /// 4. Copy the configuration values below
 /// 5. Replace 'YOUR_XXX' placeholders with actual values
-/// 
+///
 /// To enable Firebase in the app:
 /// - Uncomment the Firebase initialization in lib/main.dart
 
@@ -42,13 +42,14 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyD2tjYP4kgFh_ClomJHLFBn_4Y0N_eT4',
+    apiKey: 'AIzaSyD2tjiYP4KgFh_ClomJMtLFBn_4Y9M_eT4',
     appId: '1:100159620207:web:50cf0ed26bc98a14c48d6a',
     messagingSenderId: '100159620207',
     projectId: 'greengrid-hill',
     authDomain: 'greengrid-hill.firebaseapp.com',
     databaseURL: 'https://greengrid-hill-default-rtdb.firebaseio.com',
     storageBucket: 'greengrid-hill.firebasestorage.app',
+    measurementId: 'G-4XXJJQXG60',
   );
 
   static const FirebaseOptions android = FirebaseOptions(

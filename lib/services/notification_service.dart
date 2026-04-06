@@ -8,7 +8,8 @@ class NotificationService {
   factory NotificationService() => _instance;
   NotificationService._internal();
 
-  final FlutterLocalNotificationsPlugin _notifications = FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin _notifications =
+      FlutterLocalNotificationsPlugin();
   bool _isInitialized = false;
 
   // Notification thresholds
@@ -21,13 +22,15 @@ class NotificationService {
   Future<void> initialize() async {
     if (_isInitialized) return;
 
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidSettings = AndroidInitializationSettings(
+      '@mipmap/ic_launcher',
+    );
     const iosSettings = DarwinInitializationSettings(
       requestAlertPermission: true,
       requestBadgePermission: true,
       requestSoundPermission: true,
     );
-    
+
     const initSettings = InitializationSettings(
       android: androidSettings,
       iOS: iosSettings,
@@ -39,7 +42,7 @@ class NotificationService {
         onDidReceiveNotificationResponse: _onNotificationTapped,
       );
       _isInitialized = true;
-      
+
       // Request permissions for iOS
       await _requestPermissions();
     } catch (e) {
@@ -50,15 +53,15 @@ class NotificationService {
 
   Future<void> _requestPermissions() async {
     await _notifications
-        .resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>()
-        ?.requestPermissions(
-          alert: true,
-          badge: true,
-          sound: true,
-        );
-        
+        .resolvePlatformSpecificImplementation<
+          IOSFlutterLocalNotificationsPlugin
+        >()
+        ?.requestPermissions(alert: true, badge: true, sound: true);
+
     await _notifications
-        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >()
         ?.requestNotificationsPermission();
   }
 
@@ -76,14 +79,16 @@ class NotificationService {
         await _showNotification(
           id: sensor.sensorId.hashCode,
           title: '🚨 Critical Moisture Alert',
-          body: '${sensor.location}: ${sensor.moistureLevel.toStringAsFixed(1)}% - Immediate irrigation needed!',
+          body:
+              '${sensor.location}: ${sensor.moistureLevel.toStringAsFixed(1)}% - Immediate irrigation needed!',
           priority: Priority.max,
         );
       } else if (sensor.moistureLevel <= warningMoistureThreshold) {
         await _showNotification(
           id: sensor.sensorId.hashCode,
           title: '⚠️ Low Moisture Warning',
-          body: '${sensor.location}: ${sensor.moistureLevel.toStringAsFixed(1)}% - Consider watering soon',
+          body:
+              '${sensor.location}: ${sensor.moistureLevel.toStringAsFixed(1)}% - Consider watering soon',
           priority: Priority.high,
         );
       }
@@ -99,14 +104,16 @@ class NotificationService {
         await _showNotification(
           id: tank.tankId.hashCode,
           title: '🚨 Tank Empty Alert',
-          body: '${tank.tankId}: ${tank.levelPercentage.toStringAsFixed(1)}% - Refill immediately!',
+          body:
+              '${tank.tankId}: ${tank.levelPercentage.toStringAsFixed(1)}% - Refill immediately!',
           priority: Priority.max,
         );
       } else if (tank.levelPercentage <= lowTankThreshold) {
         await _showNotification(
           id: tank.tankId.hashCode,
           title: '⚠️ Low Tank Level',
-          body: '${tank.tankId}: ${tank.levelPercentage.toStringAsFixed(1)}% - Plan to refill soon',
+          body:
+              '${tank.tankId}: ${tank.levelPercentage.toStringAsFixed(1)}% - Plan to refill soon',
           priority: Priority.high,
         );
       }
@@ -119,8 +126,8 @@ class NotificationService {
 
     await _showNotification(
       id: pumpId.hashCode,
-      title: '❌ Pump Control Failed',
-      body: 'Failed to control $pumpId in $zone - Check connection',
+      title: '❌ Valve Control Failed',
+      body: 'Failed to control ${pumpId.toLowerCase().replaceAll('pump_', 'Valve ').replaceAll('pump', 'Valve ')} in $zone - Check connection',
       priority: Priority.max,
     );
   }

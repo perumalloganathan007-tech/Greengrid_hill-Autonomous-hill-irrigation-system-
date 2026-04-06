@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'dart:async';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -6,11 +7,11 @@ import '../models/pump_status.dart';
 /// Service for controlling pumps/solenoids with debounce protection
 class ControlService {
   final String esp32BaseUrl; // e.g., "http://192.168.1.100"
-  
+
   // Debounce timer to prevent rapid toggling
   Timer? _debounceTimer;
   static const Duration debounceDuration = Duration(seconds: 2);
-  
+
   // Track last command sent
   DateTime? _lastCommandTime;
 
@@ -23,7 +24,7 @@ class ControlService {
   }) async {
     // Debounce check
     if (_debounceTimer?.isActive ?? false) {
-      print('Command ignored: Debounce active');
+      debugPrint('Command ignored: Debounce active');
       return false;
     }
 
@@ -31,22 +32,24 @@ class ControlService {
     if (_lastCommandTime != null) {
       final timeSinceLastCommand = DateTime.now().difference(_lastCommandTime!);
       if (timeSinceLastCommand < debounceDuration) {
-        print('Command ignored: Too soon since last command');
+        debugPrint('Command ignored: Too soon since last command');
         return false;
       }
     }
 
     try {
       // Send HTTP POST request to ESP32
-      final response = await http.post(
-        Uri.parse('$esp32BaseUrl/api/pump/control'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'pumpId': pumpId,
-          'action': turnOn ? 'on' : 'off',
-          'timestamp': DateTime.now().toIso8601String(),
-        }),
-      ).timeout(const Duration(seconds: 5));
+      final response = await http
+          .post(
+            Uri.parse('$esp32BaseUrl/api/pump/control'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'pumpId': pumpId,
+              'action': turnOn ? 'on' : 'off',
+              'timestamp': DateTime.now().toIso8601String(),
+            }),
+          )
+          .timeout(const Duration(seconds: 5));
 
       _lastCommandTime = DateTime.now();
 
@@ -56,14 +59,14 @@ class ControlService {
       });
 
       if (response.statusCode == 200) {
-        print('Pump ${turnOn ? "activated" : "deactivated"}: $pumpId');
+        debugPrint('Pump ${turnOn ? "activated" : "deactivated"}: $pumpId');
         return true;
       } else {
-        print('Failed to control pump: ${response.statusCode}');
+        debugPrint('Failed to control pump: ${response.statusCode}');
         return false;
       }
     } catch (e) {
-      print('Error controlling pump: $e');
+      debugPrint('Error controlling pump: $e');
       return false;
     }
   }
@@ -71,18 +74,17 @@ class ControlService {
   /// Set pump to auto mode
   Future<bool> setAutoMode(String pumpId) async {
     try {
-      final response = await http.post(
-        Uri.parse('$esp32BaseUrl/api/pump/mode'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'pumpId': pumpId,
-          'mode': 'auto',
-        }),
-      ).timeout(const Duration(seconds: 5));
+      final response = await http
+          .post(
+            Uri.parse('$esp32BaseUrl/api/pump/mode'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'pumpId': pumpId, 'mode': 'auto'}),
+          )
+          .timeout(const Duration(seconds: 5));
 
       return response.statusCode == 200;
     } catch (e) {
-      print('Error setting auto mode: $e');
+      debugPrint('Error setting auto mode: $e');
       return false;
     }
   }
@@ -90,18 +92,17 @@ class ControlService {
   /// Set pump to manual mode
   Future<bool> setManualMode(String pumpId) async {
     try {
-      final response = await http.post(
-        Uri.parse('$esp32BaseUrl/api/pump/mode'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'pumpId': pumpId,
-          'mode': 'manual',
-        }),
-      ).timeout(const Duration(seconds: 5));
+      final response = await http
+          .post(
+            Uri.parse('$esp32BaseUrl/api/pump/mode'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'pumpId': pumpId, 'mode': 'manual'}),
+          )
+          .timeout(const Duration(seconds: 5));
 
       return response.statusCode == 200;
     } catch (e) {
-      print('Error setting manual mode: $e');
+      debugPrint('Error setting manual mode: $e');
       return false;
     }
   }
@@ -109,17 +110,20 @@ class ControlService {
   /// Get current pump status from ESP32
   Future<PumpStatus?> getPumpStatus(String pumpId) async {
     try {
-      final response = await http.get(
-        Uri.parse('$esp32BaseUrl/api/pump/status/$pumpId'),
-      ).timeout(const Duration(seconds: 5));
+      final response = await http
+          .get(Uri.parse('$esp32BaseUrl/api/pump/status/$pumpId'))
+          .timeout(const Duration(seconds: 2));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         return PumpStatus.fromJson(data);
       }
       return null;
+    } on TimeoutException {
+      debugPrint('Timeout fetching pump status: $pumpId is unreachable.');
+      return null;
     } catch (e) {
-      print('Error fetching pump status: $e');
+      debugPrint('Error fetching pump status: $e');
       return null;
     }
   }
@@ -127,14 +131,19 @@ class ControlService {
   /// Emergency stop all pumps
   Future<bool> emergencyStopAll() async {
     try {
-      final response = await http.post(
-        Uri.parse('$esp32BaseUrl/api/emergency/stop'),
-        headers: {'Content-Type': 'application/json'},
-      ).timeout(const Duration(seconds: 5));
+      final response = await http
+          .post(
+            Uri.parse('$esp32BaseUrl/api/emergency/stop'),
+            headers: {'Content-Type': 'application/json'},
+          )
+          .timeout(const Duration(seconds: 5));
 
       return response.statusCode == 200;
+    } on TimeoutException {
+      debugPrint('Timeout during emergency stop: ESP32 is unreachable.');
+      return false;
     } catch (e) {
-      print('Error during emergency stop: $e');
+      debugPrint('Error during emergency stop: $e');
       return false;
     }
   }

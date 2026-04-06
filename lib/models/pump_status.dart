@@ -68,5 +68,13 @@ class PumpStatus extends Equatable {
   }
 
   @override
-  List<Object?> get props => [pumpId, isActive, flowRate, pressure, lastToggled, controlMode, zone];
+  List<Object?> get props => [
+    pumpId,
+    isActive,
+    flowRate,
+    pressure,
+    lastToggled,
+    controlMode,
+    zone,
+  ];
 }

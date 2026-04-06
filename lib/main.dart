@@ -1,35 +1,45 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
-import 'views/screens/splash_screen.dart';
 import 'utils/theme.dart';
 import 'services/preferences_service.dart';
+import 'views/screens/auth_wrapper.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'services/auth_service.dart';
+import 'services/audit_service.dart';
+import 'viewmodels/auth_bloc.dart';
+import 'viewmodels/auth_event.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  
-  // Initialize preferences
-  final prefsService = PreferencesService();
-  await prefsService.init();
-  
-  // Check if first launch
-  final isFirstLaunch = await prefsService.isFirstLaunch();
-  if (isFirstLaunch) {
-    // Set default preferences on first launch
-    await prefsService.setThemeMode('system');
-    await prefsService.setNotificationsEnabled(true);
-    await prefsService.setAutoModeDefault(true);
-    await prefsService.setRefreshInterval(5);
+  try {
+    WidgetsFlutterBinding.ensureInitialized();
+
+    // Initialize preferences
+    final prefsService = PreferencesService();
+    await prefsService.init();
+
+    // Check if first launch
+    final isFirstLaunch = await prefsService.isFirstLaunch();
+    if (isFirstLaunch) {
+      // Set default preferences on first launch
+      await prefsService.setThemeMode('system');
+      await prefsService.setNotificationsEnabled(true);
+      await prefsService.setAutoModeDefault(true);
+      await prefsService.setRefreshInterval(5);
+    }
+
+    // === FIREBASE SETUP ===
+    // Firebase is now enabled and configured!
+
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+
+    runApp(const GreenGridApp());
+  } catch (e, st) {
+    debugPrint('INITIALIZATION ERROR CAUGHT: $e');
+    debugPrint(st.toString());
   }
-  
-  // === FIREBASE SETUP ===
-  // Firebase is now enabled and configured!
-  
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-  
-  runApp(const GreenGridApp());
 }
 
 class GreenGridApp extends StatefulWidget {
@@ -55,8 +65,8 @@ class _GreenGridAppState extends State<GreenGridApp> {
       _themeMode = mode == 'light'
           ? ThemeMode.light
           : mode == 'dark'
-              ? ThemeMode.dark
-              : ThemeMode.system;
+          ? ThemeMode.dark
+          : ThemeMode.system;
     });
   }
 
@@ -68,13 +78,33 @@ class _GreenGridAppState extends State<GreenGridApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'GreenGrid Hill',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: _themeMode,
-      home: SplashScreen(onThemeChanged: _updateThemeMode),
+    return MultiRepositoryProvider(
+      providers: [
+        RepositoryProvider<AuthService>(create: (context) => AuthService()),
+        RepositoryProvider<AuditService>(create: (context) => AuditService()),
+        RepositoryProvider<PreferencesService>.value(value: _prefsService),
+      ],
+      child: MultiBlocProvider(
+        providers: [
+          BlocProvider<AuthBloc>(
+            create: (context) => AuthBloc(
+              authService: RepositoryProvider.of<AuthService>(context),
+              auditService: RepositoryProvider.of<AuditService>(context),
+              preferencesService: RepositoryProvider.of<PreferencesService>(
+                context,
+              ),
+            )..add(const AuthCheckRequested()),
+          ),
+        ],
+        child: MaterialApp(
+          title: 'GreenGrid Hill',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode: _themeMode,
+          home: AuthWrapper(onThemeChanged: _updateThemeMode),
+        ),
+      ),
     );
   }
 }

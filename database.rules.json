@@ -1,33 +1,32 @@
 {
   "rules": {
-    "terrace": {
-      ".read": "auth != null",
-      ".write": "auth != null"
+    "users": {
+      ".read": true,
+      ".write": true
+    },
+    "sensors": {
+      ".read": true,
+      ".write": true
     },
     "tanks": {
-      ".read": "auth != null",
-      ".write": "auth != null"
+      ".read": true,
+      ".write": true
     },
-    "pump": {
-      ".read": "auth != null",
-      ".write": "auth != null"
+    "pumps": {
+      ".read": true,
+      ".write": true
     },
-    "schedule": {
-      ".read": "auth != null",
-      ".write": "auth != null"
+    "analytics": {
+      ".read": true,
+      ".write": true
+    },
+    "terrace": {
+      ".read": true,
+      ".write": true
     },
     "audit_logs": {
-      "$userId": {
-        ".read": "auth != null && (auth.uid == $userId || root.child('users').child(auth.uid).child('role').val() == 'admin')",
-        ".write": "auth != null",
-        "$timestamp": {
-          ".validate": "newData.hasChildren(['action', 'category', 'timestamp', 'userId'])"
-        }
-      }
-    },
-    "$other": {
-      ".read": "auth != null",
-      ".write": "auth != null"
+      ".read": true,
+      ".write": true
     }
   }
 }

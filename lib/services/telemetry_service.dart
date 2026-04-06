@@ -1,36 +1,37 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:firebase_database/firebase_database.dart';
 import '../models/sensor_data.dart';
 import '../models/tank_level.dart';
 import 'cache_service.dart';
 
 /// Service for real-time telemetry data streaming from Firebase
-/// Falls back to demo data if Firebase is not configured
 class TelemetryService {
   FirebaseDatabase? _database;
   bool _useFirebase = false;
   final CacheService _cacheService = CacheService();
-  
+  final String userId;
+
   // StreamControllers for real-time data
   final _sensorDataController = StreamController<List<SensorData>>.broadcast();
   final _tankLevelController = StreamController<List<TankLevel>>.broadcast();
-  
+
   // Database references
   DatabaseReference? _sensorsRef;
   DatabaseReference? _tanksRef;
-  
+
   // Subscriptions
   StreamSubscription? _sensorSubscription;
   StreamSubscription? _tankSubscription;
 
-  TelemetryService() {
+  TelemetryService({required this.userId}) {
     try {
       _database = FirebaseDatabase.instance;
-      _sensorsRef = _database!.ref('terrace');
+      _sensorsRef = _database!.ref('users/$userId/moisture_data'); // Aligned with user-specific structure
       _tanksRef = _database!.ref('tanks');
       _useFirebase = true;
     } catch (e) {
-      // Firebase not initialized, will use demo data
+      // Firebase not initialized, will use cache data
       _useFirebase = false;
     }
   }
@@ -48,55 +49,50 @@ class TelemetryService {
       _loadCachedSensors();
       return;
     }
-    
-    _sensorSubscription = _sensorsRef!.onValue.listen((event) {
-      final data = event.snapshot.value;
-      if (data != null) {
-        final List<SensorData> sensors = [];
-        
-        if (data is Map) {
-          // Handle different data formats from Firebase
-          final moistureData = data['moisture_data'];
-          
-          if (moistureData is String) {
-            // Parse format like "T1:12,T2:37,T3:0"
-            sensors.addAll(_parseMoistureData(moistureData));
-          } else {
-            // Handle standard JSON format
-            data.forEach((key, value) {
-              if (value is Map) {
-                sensors.add(SensorData.fromJson(Map<String, dynamic>.from(value)));
-              }
-            });
+
+    try {
+      debugPrint('TelemetryService: Starting sensor monitor for users/$userId/moisture_data');
+      // Listen to the user-specific moisture data directly
+      _sensorSubscription = _sensorsRef!.onValue.listen((event) {
+        final data = event.snapshot.value;
+        if (data != null && data is String) {
+          final sensors = _parseMoistureData(data);
+          if (sensors.isNotEmpty) {
+            _sensorDataController.add(sensors);
+            _cacheService.cacheSensors(sensors);
           }
         }
-        
-        _sensorDataController.add(sensors);
-        // Cache for offline use
-        _cacheService.cacheSensors(sensors);
-      }
-    });
+      }, onError: (error) {
+        debugPrint('TelemetryService ERROR (User Moisture Data): $error');
+      });
+    } catch (e) {
+      debugPrint('TelemetryService: Exception during sensor monitor setup: $e');
+    }
   }
-  
+
+
+
   /// Parse moisture data from format "T1:12,T2:37,T3:0"
   List<SensorData> _parseMoistureData(String data) {
     final List<SensorData> sensors = [];
     final parts = data.split(',');
-    
+
     for (var part in parts) {
       final values = part.split(':');
       if (values.length == 2) {
         final sensorId = values[0].trim();
         final moisture = double.tryParse(values[1].trim()) ?? 0.0;
-        
-        sensors.add(SensorData.fromMoistureLevel(
-          sensorId: sensorId,
-          moistureLevel: moisture,
-          location: 'Terrace Zone ${sensorId.replaceAll('T', '')}',
-        ));
+
+        sensors.add(
+          SensorData.fromMoistureLevel(
+            sensorId: sensorId,
+            moistureLevel: moisture,
+            location: 'Terrace Zone ${sensorId.replaceAll('T', '')}',
+          ),
+        );
       }
     }
-    
+
     return sensors;
   }
 
@@ -107,34 +103,51 @@ class TelemetryService {
       _loadCachedTanks();
       return;
     }
-    
-    _tankSubscription = _tanksRef!.onValue.listen((event) {
-      final data = event.snapshot.value;
-      if (data != null && data is Map) {
-        final List<TankLevel> tanks = [];
-        data.forEach((key, value) {
-          if (value is Map) {
-            tanks.add(TankLevel.fromJson(Map<String, dynamic>.from(value)));
-          }
-        });
-        _tankLevelController.add(tanks);
-        // Cache for offline use
-        _cacheService.cacheTanks(tanks);
-      }
-    });
+
+    try {
+      _tankSubscription = _tanksRef!.onValue.listen((event) {
+        final data = event.snapshot.value;
+        if (data != null && data is Map) {
+          final List<TankLevel> tanks = [];
+          data.forEach((key, value) {
+            if (value is Map) {
+              final mapValue = Map<String, dynamic>.from(value);
+              mapValue['tankId'] ??= key;
+              mapValue['timestamp'] ??= DateTime.now().toIso8601String();
+              // Removed default value assignments as they should be handled by the model or data source
+              tanks.add(TankLevel.fromJson(mapValue));
+            }
+          });
+          _tankLevelController.add(tanks);
+          // Cache for offline use
+          _cacheService.cacheTanks(tanks);
+        }
+      }, onError: (error) {
+        debugPrint('TelemetryService ERROR (Tanks): $error');
+      });
+    } catch (e) {
+      debugPrint('TelemetryService: Exception during tank monitor setup: $e');
+    }
   }
 
   /// Get latest sensor reading
   Future<SensorData?> getLatestSensorData(String sensorId) async {
     if (!_useFirebase || _sensorsRef == null) return null;
-    
+
     try {
-      final snapshot = await _sensorsRef!.child(sensorId).get();
-      if (snapshot.exists && snapshot.value != null) {
-        return SensorData.fromJson(Map<String, dynamic>.from(snapshot.value as Map));
+      final snapshot = await _sensorsRef!.get();
+      if (snapshot.exists && snapshot.value != null && snapshot.value is String) {
+        final dataStr = snapshot.value as String;
+        final sensors = _parseMoistureData(dataStr);
+        try {
+          return sensors.firstWhere((s) => s.sensorId == sensorId);
+        } catch (_) {
+          return null;
+        }
       }
       return null;
     } catch (e) {
+      debugPrint('TelemetryService: Error getting latest sensors: $e');
       return null;
     }
   }
@@ -142,11 +155,13 @@ class TelemetryService {
   /// Get latest tank level
   Future<TankLevel?> getLatestTankLevel(String tankId) async {
     if (!_useFirebase || _tanksRef == null) return null;
-    
+
     try {
       final snapshot = await _tanksRef!.child(tankId).get();
       if (snapshot.exists && snapshot.value != null) {
-        return TankLevel.fromJson(Map<String, dynamic>.from(snapshot.value as Map));
+        return TankLevel.fromJson(
+          Map<String, dynamic>.from(snapshot.value as Map),
+        );
       }
       return null;
     } catch (e) {

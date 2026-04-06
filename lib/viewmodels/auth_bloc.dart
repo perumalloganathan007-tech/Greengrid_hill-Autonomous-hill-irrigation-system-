@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'auth_event.dart';
 import 'auth_state.dart';
@@ -15,10 +16,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     required AuthService authService,
     required AuditService auditService,
     required PreferencesService preferencesService,
-  })  : _authService = authService,
-        _auditService = auditService,
-        _preferencesService = preferencesService,
-        super(const AuthInitial()) {
+  }) : _authService = authService,
+       _auditService = auditService,
+       _preferencesService = preferencesService,
+       super(const AuthInitial()) {
     // Register event handlers
     on<AuthCheckRequested>(_onAuthCheckRequested);
     on<LoginRequested>(_onLoginRequested);
@@ -38,9 +39,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     try {
       emit(const AuthLoading());
-      
+
       final userModel = await _authService.getCurrentUserModel();
-      
+
       if (userModel != null) {
         emit(Authenticated(user: userModel));
       } else {
@@ -72,10 +73,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
       emit(Authenticated(user: user));
     } catch (e) {
-      emit(AuthError(
-        message: e.toString(),
-        isUnauthenticated: true,
-      ));
+      emit(AuthError(message: e.toString(), isUnauthenticated: true));
     }
   }
 
@@ -102,10 +100,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
       emit(Authenticated(user: user));
     } catch (e) {
-      emit(AuthError(
-        message: e.toString(),
-        isUnauthenticated: true,
-      ));
+      emit(AuthError(message: e.toString(), isUnauthenticated: true));
     }
   }
 
@@ -124,10 +119,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
       emit(Authenticated(user: user));
     } catch (e) {
-      emit(AuthError(
-        message: e.toString(),
-        isUnauthenticated: true,
-      ));
+      emit(AuthError(message: e.toString(), isUnauthenticated: true));
     }
   }
 
@@ -136,19 +128,26 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     LogoutRequested event,
     Emitter<AuthState> emit,
   ) async {
+    debugPrint('AuthBloc: LogoutRequested received');
     try {
-      emit(const AuthLoading());
+      // Fire and forget logout logging and remote sign out
+      // We don't await these to ensure the UI updates immediately
+      _auditService.logLogout();
+      _authService.signOut();
 
-      // Log the logout
-      await _auditService.logLogout();
-
-      await _authService.signOut();
-
-      // Clear remember me preference
-      await _preferencesService.setRememberMe(false);
-
+      // Emit unauthenticated state immediately for better UX
+      debugPrint('AuthBloc: Emitting Unauthenticated');
       emit(const Unauthenticated());
+
+      // Clear remember me preference in background
+      _preferencesService.setRememberMe(false).then((_) {
+        debugPrint('AuthBloc: Remember me cleared');
+      }).catchError((e) {
+        debugPrint('AuthBloc: Error clearing remember me: $e');
+      });
+
     } catch (e) {
+      debugPrint('AuthBloc: Logout error: $e');
       emit(AuthError(message: e.toString()));
     }
   }
@@ -164,15 +163,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       await _authService.resetPassword(event.email);
 
       emit(PasswordResetSent(email: event.email));
-      
+
       // Return to unauthenticated state after a delay
       await Future.delayed(const Duration(seconds: 3));
       emit(const Unauthenticated());
     } catch (e) {
-      emit(AuthError(
-        message: e.toString(),
-        isUnauthenticated: true,
-      ));
+      emit(AuthError(message: e.toString(), isUnauthenticated: true));
     }
   }
 
@@ -197,13 +193,15 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
       // Get updated user model
       final updatedUser = await _authService.getCurrentUserModel();
-      
+
       if (updatedUser != null) {
-        emit(ProfileUpdated(
-          user: updatedUser,
-          message: 'Display name updated successfully',
-        ));
-        
+        emit(
+          ProfileUpdated(
+            user: updatedUser,
+            message: 'Display name updated successfully',
+          ),
+        );
+
         // Return to authenticated state
         await Future.delayed(const Duration(seconds: 2));
         emit(Authenticated(user: updatedUser));
@@ -233,12 +231,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       );
 
       final currentUser = (state as Authenticated).user;
-      
-      emit(ProfileUpdated(
-        user: currentUser,
-        message: 'Password updated successfully',
-      ));
-      
+
+      emit(
+        ProfileUpdated(
+          user: currentUser,
+          message: 'Password updated successfully',
+        ),
+      );
+
       // Return to authenticated state
       await Future.delayed(const Duration(seconds: 2));
       emit(Authenticated(user: currentUser));
@@ -257,7 +257,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
       // Check if remember me is enabled
       final rememberMe = await _preferencesService.getRememberMe();
-      
+
       if (!rememberMe) {
         emit(const Unauthenticated());
         return;
@@ -265,7 +265,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
       // Check if user is already authenticated
       final userModel = await _authService.getCurrentUserModel();
-      
+
       if (userModel != null) {
         emit(Authenticated(user: userModel));
       } else {

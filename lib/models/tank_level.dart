@@ -70,5 +70,12 @@ class TankLevel extends Equatable {
   }
 
   @override
-  List<Object?> get props => [tankId, levelPercentage, volumeLiters, capacityLiters, timestamp, status];
+  List<Object?> get props => [
+    tankId,
+    levelPercentage,
+    volumeLiters,
+    capacityLiters,
+    timestamp,
+    status,
+  ];
 }

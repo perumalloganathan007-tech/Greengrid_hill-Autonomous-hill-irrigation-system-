@@ -2,19 +2,18 @@ import 'package:firebase_database/firebase_database.dart';
 import '../models/water_usage.dart';
 
 /// Service for retrieving and analyzing historical water usage data
-/// Falls back to demo data if Firebase is not configured
 class AnalyticsService {
   FirebaseDatabase? _database;
   DatabaseReference? _analyticsRef;
   bool _useFirebase = false;
-
-  AnalyticsService() {
+  final String userId;
+  AnalyticsService({this.userId = ''}) {
     try {
       _database = FirebaseDatabase.instance;
       _analyticsRef = _database!.ref('analytics/water_usage');
       _useFirebase = true;
     } catch (e) {
-      // Firebase not initialized, will use demo data
+      // Firebase not initialized
       _useFirebase = false;
     }
   }
@@ -27,7 +26,7 @@ class AnalyticsService {
     if (!_useFirebase || _analyticsRef == null) {
       return [];
     }
-    
+
     try {
       final snapshot = await _analyticsRef!
           .orderByChild('date')
@@ -38,10 +37,12 @@ class AnalyticsService {
       if (snapshot.exists && snapshot.value != null) {
         final data = snapshot.value as Map;
         final List<WaterUsage> usageList = [];
-        
+
         data.forEach((key, value) {
           if (value is Map) {
-            usageList.add(WaterUsage.fromJson(Map<String, dynamic>.from(value)));
+            usageList.add(
+              WaterUsage.fromJson(Map<String, dynamic>.from(value)),
+            );
           }
         });
 
@@ -74,7 +75,10 @@ class AnalyticsService {
     required DateTime startDate,
     required DateTime endDate,
   }) async {
-    final usageData = await getUsageData(startDate: startDate, endDate: endDate);
+    final usageData = await getUsageData(
+      startDate: startDate,
+      endDate: endDate,
+    );
     return usageData.fold<double>(0.0, (sum, item) => sum + item.litersSaved);
   }
 
@@ -83,7 +87,10 @@ class AnalyticsService {
     required DateTime startDate,
     required DateTime endDate,
   }) async {
-    final usageData = await getUsageData(startDate: startDate, endDate: endDate);
+    final usageData = await getUsageData(
+      startDate: startDate,
+      endDate: endDate,
+    );
     return usageData.fold<double>(0.0, (sum, item) => sum + item.litersUsed);
   }
 
@@ -92,10 +99,16 @@ class AnalyticsService {
     required DateTime startDate,
     required DateTime endDate,
   }) async {
-    final usageData = await getUsageData(startDate: startDate, endDate: endDate);
+    final usageData = await getUsageData(
+      startDate: startDate,
+      endDate: endDate,
+    );
     if (usageData.isEmpty) return 0.0;
-    
-    final total = usageData.fold<double>(0.0, (sum, item) => sum + item.averageMoisture);
+
+    final total = usageData.fold<double>(
+      0.0,
+      (sum, item) => sum + item.averageMoisture,
+    );
     return total / usageData.length;
   }
 
@@ -104,14 +117,23 @@ class AnalyticsService {
     required DateTime startDate,
     required DateTime endDate,
   }) async {
-    final usageData = await getUsageData(startDate: startDate, endDate: endDate);
+    final usageData = await getUsageData(
+      startDate: startDate,
+      endDate: endDate,
+    );
     if (usageData.isEmpty) return 0.0;
 
-    final totalUsed = usageData.fold<double>(0.0, (sum, item) => sum + item.litersUsed);
-    final totalSaved = usageData.fold<double>(0.0, (sum, item) => sum + item.litersSaved);
-    
+    final totalUsed = usageData.fold<double>(
+      0.0,
+      (sum, item) => sum + item.litersUsed,
+    );
+    final totalSaved = usageData.fold<double>(
+      0.0,
+      (sum, item) => sum + item.litersSaved,
+    );
+
     if (totalUsed + totalSaved == 0) return 0.0;
-    
+
     return (totalSaved / (totalUsed + totalSaved)) * 100;
   }
 
@@ -120,7 +142,10 @@ class AnalyticsService {
     required DateTime startDate,
     required DateTime endDate,
   }) async {
-    final usageData = await getUsageData(startDate: startDate, endDate: endDate);
+    final usageData = await getUsageData(
+      startDate: startDate,
+      endDate: endDate,
+    );
     if (usageData.length < 2) return 0.0;
 
     // Calculate linear regression slope
@@ -145,7 +170,10 @@ class AnalyticsService {
     required DateTime startDate,
     required DateTime endDate,
   }) async {
-    final usageData = await getUsageData(startDate: startDate, endDate: endDate);
+    final usageData = await getUsageData(
+      startDate: startDate,
+      endDate: endDate,
+    );
     if (usageData.isEmpty) return null;
 
     return usageData.reduce((a, b) => a.litersUsed > b.litersUsed ? a : b);
@@ -156,7 +184,10 @@ class AnalyticsService {
     required DateTime startDate,
     required DateTime endDate,
   }) async {
-    final usageData = await getUsageData(startDate: startDate, endDate: endDate);
+    final usageData = await getUsageData(
+      startDate: startDate,
+      endDate: endDate,
+    );
     if (usageData.isEmpty) return null;
 
     return usageData.reduce((a, b) => a.litersUsed < b.litersUsed ? a : b);
@@ -167,21 +198,26 @@ class AnalyticsService {
     required DateTime startDate,
     required DateTime endDate,
   }) async {
-    final usageData = await getUsageData(startDate: startDate, endDate: endDate);
+    final usageData = await getUsageData(
+      startDate: startDate,
+      endDate: endDate,
+    );
     if (usageData.isEmpty) {
       return {'average': 0.0, 'min': 0.0, 'max': 0.0};
     }
 
-    final total = usageData.fold<double>(0.0, (sum, item) => sum + item.litersUsed);
+    final total = usageData.fold<double>(
+      0.0,
+      (sum, item) => sum + item.litersUsed,
+    );
     final average = total / usageData.length;
-    final min = usageData.map((e) => e.litersUsed).reduce((a, b) => a < b ? a : b);
-    final max = usageData.map((e) => e.litersUsed).reduce((a, b) => a > b ? a : b);
+    final min = usageData
+        .map((e) => e.litersUsed)
+        .reduce((a, b) => a < b ? a : b);
+    final max = usageData
+        .map((e) => e.litersUsed)
+        .reduce((a, b) => a > b ? a : b);
 
-    return {
-      'average': average,
-      'min': min,
-      'max': max,
-      'total': total,
-    };
+    return {'average': average, 'min': min, 'max': max, 'total': total};
   }
 }

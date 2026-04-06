@@ -46,7 +46,10 @@ class _PumpControlWidgetState extends State<PumpControlWidget> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      widget.pumpId,
+                      widget.pumpId
+                          .toLowerCase()
+                          .replaceAll('pump_', 'Valve ')
+                          .replaceAll('pump', 'Valve '),
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -64,7 +67,7 @@ class _PumpControlWidgetState extends State<PumpControlWidget> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: widget.isActive ? Colors.green.withOpacity(0.2) : Colors.grey.withOpacity(0.2),
+                    color: widget.isActive ? Colors.green.withValues(alpha: 0.2) : Colors.grey.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -161,7 +164,7 @@ class _PumpControlWidgetState extends State<PumpControlWidget> {
     return Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: Colors.blue.withOpacity(0.1),
+        color: Colors.blue.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -35,10 +36,13 @@ class AuditService {
           .ref(_auditLogsPath)
           .child(user.uid)
           .child(timestamp.toString())
-          .set(logEntry);
+          .set(logEntry)
+          .timeout(const Duration(seconds: 2));
     } catch (e) {
-      // Don't throw error if audit logging fails
-      print('Failed to log action: $e');
+      // Silence permission errors to avoid console noise
+      if (!e.toString().contains('permission-denied')) {
+        debugPrint('AuditService: Failed to log action: $e');
+      }
     }
   }
 
@@ -49,14 +53,10 @@ class AuditService {
     String? mode,
   }) async {
     await logAction(
-      action: activated ? 'Pump Activated' : 'Pump Deactivated',
+      action: activated ? 'Valve Activated' : 'Valve Deactivated',
       category: 'pump_control',
-      details: 'Pump $pumpId ${activated ? "turned on" : "turned off"}',
-      metadata: {
-        'pumpId': pumpId,
-        'activated': activated,
-        'mode': mode,
-      },
+      details: 'Valve ${pumpId.replaceAll('Pump', 'Valve')} ${activated ? "turned on" : "turned off"}',
+      metadata: {'pumpId': pumpId, 'activated': activated, 'mode': mode},
     );
   }
 
@@ -134,7 +134,7 @@ class AuditService {
 
       final logs = <Map<String, dynamic>>[];
       final data = snapshot.value as Map<dynamic, dynamic>?;
-      
+
       if (data != null) {
         data.forEach((key, value) {
           if (value is Map) {
@@ -147,7 +147,7 @@ class AuditService {
       logs.sort((a, b) => b['timestamp'].compareTo(a['timestamp']));
       return logs;
     } catch (e) {
-      print('Failed to get user logs: $e');
+      debugPrint('AuditService: Failed to get user logs: $e');
       return [];
     }
   }
@@ -176,22 +176,18 @@ class AuditService {
 
       // Sort by timestamp descending
       logs.sort((a, b) => b['timestamp'].compareTo(a['timestamp']));
-      
+
       // Limit results
       return logs.take(limit).toList();
     } catch (e) {
-      print('Failed to get all logs: $e');
+      debugPrint('AuditService: Failed to get all logs: $e');
       return [];
     }
   }
 
   /// Stream of audit logs for real-time updates (admin only)
   Stream<List<Map<String, dynamic>>> getLogsStream() {
-    return _database
-        .ref(_auditLogsPath)
-        .limitToLast(50)
-        .onValue
-        .map((event) {
+    return _database.ref(_auditLogsPath).limitToLast(50).onValue.map((event) {
       final logs = <Map<String, dynamic>>[];
       final data = event.snapshot.value as Map<dynamic, dynamic>?;
 

@@ -10,6 +10,7 @@ class UserModel extends Equatable {
   final DateTime createdAt;
   final DateTime lastLogin;
   final bool isActive;
+  final bool isOnline;
 
   const UserModel({
     required this.uid,
@@ -19,6 +20,7 @@ class UserModel extends Equatable {
     required this.createdAt,
     required this.lastLogin,
     this.isActive = true,
+    this.isOnline = false,
   });
 
   /// Create user from Firestore document
@@ -31,6 +33,7 @@ class UserModel extends Equatable {
       createdAt: DateTime.parse(json['createdAt'] as String),
       lastLogin: DateTime.parse(json['lastLogin'] as String),
       isActive: json['isActive'] as bool? ?? true,
+      isOnline: json['isOnline'] as bool? ?? false,
     );
   }
 
@@ -44,6 +47,7 @@ class UserModel extends Equatable {
       'createdAt': createdAt.toIso8601String(),
       'lastLogin': lastLogin.toIso8601String(),
       'isActive': isActive,
+      'isOnline': isOnline,
     };
   }
 
@@ -56,6 +60,7 @@ class UserModel extends Equatable {
     DateTime? createdAt,
     DateTime? lastLogin,
     bool? isActive,
+    bool? isOnline,
   }) {
     return UserModel(
       uid: uid ?? this.uid,
@@ -65,6 +70,7 @@ class UserModel extends Equatable {
       createdAt: createdAt ?? this.createdAt,
       lastLogin: lastLogin ?? this.lastLogin,
       isActive: isActive ?? this.isActive,
+      isOnline: isOnline ?? this.isOnline,
     );
   }
 
@@ -84,5 +90,14 @@ class UserModel extends Equatable {
   }
 
   @override
-  List<Object?> get props => [uid, email, displayName, role, createdAt, lastLogin, isActive];
+  List<Object?> get props => [
+    uid,
+    email,
+    displayName,
+    role,
+    createdAt,
+    lastLogin,
+    isActive,
+    isOnline,
+  ];
 }

@@ -1,14 +1,17 @@
+import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../models/user_model.dart';
 import '../models/user_role.dart';
 import 'user_service.dart';
+import 'presence_service.dart';
 
 /// Service for Firebase Authentication operations
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn();
   final UserService _userService = UserService();
+  final PresenceService _presenceService = PresenceService();
 
   /// Get current user stream
   Stream<User?> get authStateChanges => _auth.authStateChanges();
@@ -33,9 +36,14 @@ class AuthService {
 
       // Update last login
       await _userService.updateLastLogin(credential.user!.uid);
+      
+      // Initialize real-time presence
+      _presenceService.initialize(credential.user!.uid);
 
       // Get user profile
-      final userProfile = await _userService.getUserProfile(credential.user!.uid);
+      final userProfile = await _userService.getUserProfile(
+        credential.user!.uid,
+      );
       return userProfile;
     } on FirebaseAuthException catch (e) {
       throw _handleAuthException(e);
@@ -61,9 +69,11 @@ class AuthService {
       // Update display name
       await credential.user!.updateDisplayName(displayName);
 
-      // Check if this is the first user (will be admin)
-      final isFirstUser = await _userService.isFirstUser();
-      final role = isFirstUser ? UserRole.admin : UserRole.regularUser;
+      // Check if email matches hardcoded admins
+      final bool isAdmin =
+          email.toLowerCase() == 'perumalloganathan007@gmail.com' ||
+          email.toLowerCase() == 'subikshan.mailbox@gmail.com';
+      final role = isAdmin ? UserRole.admin : UserRole.regularUser;
 
       // Create user profile in Firestore
       final userModel = UserModel(
@@ -76,6 +86,10 @@ class AuthService {
       );
 
       await _userService.createUserProfile(userModel);
+      
+      // Initialize real-time presence
+      _presenceService.initialize(credential.user!.uid);
+
       return userModel;
     } on FirebaseAuthException catch (e) {
       throw _handleAuthException(e);
@@ -87,13 +101,14 @@ class AuthService {
     try {
       // Trigger the Google authentication flow
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      
+
       if (googleUser == null) {
         throw Exception('Google sign-in was cancelled');
       }
 
       // Obtain the auth details from the request
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
 
       // Create a new credential
       final credential = GoogleAuthProvider.credential(
@@ -116,11 +131,17 @@ class AuthService {
         existingProfile = await _userService.getUserProfile(user.uid);
         // Update last login
         await _userService.updateLastLogin(user.uid);
+        
+        // Initialize real-time presence
+        _presenceService.initialize(user.uid);
+
         return existingProfile;
       } catch (e) {
-        // User doesn't exist, create new profile
-        final isFirstUser = await _userService.isFirstUser();
-        final role = isFirstUser ? UserRole.admin : UserRole.regularUser;
+        final String userEmail = user.email?.toLowerCase() ?? '';
+        final bool isAdmin =
+            userEmail == 'perumalloganathan007@gmail.com' ||
+            userEmail == 'subikshan.mailbox@gmail.com';
+        final role = isAdmin ? UserRole.admin : UserRole.regularUser;
 
         final userModel = UserModel(
           uid: user.uid,
@@ -132,6 +153,10 @@ class AuthService {
         );
 
         await _userService.createUserProfile(userModel);
+
+        // Initialize real-time presence
+        _presenceService.initialize(user.uid);
+
         return userModel;
       }
     } on FirebaseAuthException catch (e) {
@@ -144,10 +169,10 @@ class AuthService {
   /// Sign out
   Future<void> signOut() async {
     try {
-      await Future.wait([
-        _auth.signOut(),
-        _googleSignIn.signOut(),
-      ]);
+      if (_auth.currentUser != null) {
+        await _presenceService.setOffline(_auth.currentUser!.uid);
+      }
+      await Future.wait([_auth.signOut(), _googleSignIn.signOut()]);
     } on FirebaseAuthException catch (e) {
       throw _handleAuthException(e);
     }
@@ -229,7 +254,8 @@ class AuthService {
       case 'network-request-failed':
         return 'Network error. Please check your connection';
       default:
-        return e.message ?? 'An authentication error occurred';
+        debugPrint('UNHANDLED FIREBASE AUTH ERROR: [${e.code}] ${e.message}');
+        return 'Auth Error: [${e.code}] ${e.message}';
     }
   }
 }

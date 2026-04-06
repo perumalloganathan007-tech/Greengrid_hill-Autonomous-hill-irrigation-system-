@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
 import '../models/user_role.dart';
@@ -10,7 +11,11 @@ class UserService {
   /// Create user profile in Firestore
   Future<void> createUserProfile(UserModel user) async {
     try {
-      await _firestore.collection(_usersCollection).doc(user.uid).set(user.toJson());
+      await _firestore
+          .collection(_usersCollection)
+          .doc(user.uid)
+          .set(user.toJson())
+          .timeout(const Duration(seconds: 5));
     } catch (e) {
       throw Exception('Failed to create user profile: $e');
     }
@@ -19,8 +24,12 @@ class UserService {
   /// Get user profile from Firestore
   Future<UserModel> getUserProfile(String uid) async {
     try {
-      final doc = await _firestore.collection(_usersCollection).doc(uid).get();
-      
+      final doc = await _firestore
+          .collection(_usersCollection)
+          .doc(uid)
+          .get()
+          .timeout(const Duration(seconds: 5));
+
       if (!doc.exists) {
         throw Exception('User profile not found');
       }
@@ -32,9 +41,16 @@ class UserService {
   }
 
   /// Update user profile
-  Future<void> updateUserProfile(String uid, Map<String, dynamic> updates) async {
+  Future<void> updateUserProfile(
+    String uid,
+    Map<String, dynamic> updates,
+  ) async {
     try {
-      await _firestore.collection(_usersCollection).doc(uid).update(updates);
+      await _firestore
+          .collection(_usersCollection)
+          .doc(uid)
+          .update(updates)
+          .timeout(const Duration(seconds: 5));
     } catch (e) {
       throw Exception('Failed to update user profile: $e');
     }
@@ -43,12 +59,30 @@ class UserService {
   /// Update last login timestamp
   Future<void> updateLastLogin(String uid) async {
     try {
-      await _firestore.collection(_usersCollection).doc(uid).update({
-        'lastLogin': DateTime.now().toIso8601String(),
-      });
+      await _firestore
+          .collection(_usersCollection)
+          .doc(uid)
+          .update({
+            'lastLogin': DateTime.now().toIso8601String(),
+            'isOnline': true,
+          })
+          .timeout(const Duration(seconds: 5));
     } catch (e) {
       // Don't throw error if last login update fails
-      print('Failed to update last login: $e');
+      debugPrint('Failed to update last login: $e');
+    }
+  }
+
+  /// Update online status
+  Future<void> updateOnlineStatus(String uid, bool isOnline) async {
+    try {
+      await _firestore
+          .collection(_usersCollection)
+          .doc(uid)
+          .update({'isOnline': isOnline})
+          .timeout(const Duration(seconds: 5));
+    } catch (e) {
+      debugPrint('Failed to update online status: $e');
     }
   }
 
@@ -99,17 +133,18 @@ class UserService {
     }
   }
 
-  /// Check if this is the first user (for auto-admin assignment)
-  Future<bool> isFirstUser() async {
+  /// Check if this is the first or second user (for auto-admin assignment)
+  Future<bool> isFirstOrSecondUser() async {
     try {
       final querySnapshot = await _firestore
           .collection(_usersCollection)
-          .limit(1)
-          .get();
+          .limit(2)
+          .get()
+          .timeout(const Duration(seconds: 5));
 
-      return querySnapshot.docs.isEmpty;
+      return querySnapshot.docs.length < 2;
     } catch (e) {
-      // If there's an error, assume not first user
+      // If there's an error, assume not first or second user
       return false;
     }
   }
@@ -130,9 +165,25 @@ class UserService {
         .collection(_usersCollection)
         .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => UserModel.fromJson(doc.data()))
-            .toList());
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => UserModel.fromJson(doc.data()))
+              .toList(),
+        );
+  }
+
+  /// Get single user stream (for real-time updates)
+  Stream<UserModel> getUserStream(String uid) {
+    return _firestore
+        .collection(_usersCollection)
+        .doc(uid)
+        .snapshots()
+        .map((snapshot) {
+      if (!snapshot.exists) {
+        throw Exception('User not found');
+      }
+      return UserModel.fromJson(snapshot.data()!);
+    });
   }
 
   /// Search users by email or display name

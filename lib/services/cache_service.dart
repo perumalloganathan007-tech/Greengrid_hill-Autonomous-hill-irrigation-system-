@@ -15,14 +15,18 @@ class CacheService {
   /// Cache sensor data
   Future<void> cacheSensors(List<SensorData> sensors) async {
     final prefs = await SharedPreferences.getInstance();
-    final sensorMaps = sensors.map((s) => {
-      'sensorId': s.sensorId,
-      'moistureLevel': s.moistureLevel,
-      'timestamp': s.timestamp.toIso8601String(),
-      'status': s.status,
-      'location': s.location,
-    }).toList();
-    
+    final sensorMaps = sensors
+        .map(
+          (s) => {
+            'sensorId': s.sensorId,
+            'moistureLevel': s.moistureLevel,
+            'timestamp': s.timestamp.toIso8601String(),
+            'status': s.status,
+            'location': s.location,
+          },
+        )
+        .toList();
+
     await prefs.setString(_sensorCacheKey, jsonEncode(sensorMaps));
     await _updateCacheTimestamp();
   }
@@ -30,15 +34,19 @@ class CacheService {
   /// Cache tank data
   Future<void> cacheTanks(List<TankLevel> tanks) async {
     final prefs = await SharedPreferences.getInstance();
-    final tankMaps = tanks.map((t) => {
-      'tankId': t.tankId,
-      'levelPercentage': t.levelPercentage,
-      'volumeLiters': t.volumeLiters,
-      'capacityLiters': t.capacityLiters,
-      'timestamp': t.timestamp.toIso8601String(),
-      'status': t.status,
-    }).toList();
-    
+    final tankMaps = tanks
+        .map(
+          (t) => {
+            'tankId': t.tankId,
+            'levelPercentage': t.levelPercentage,
+            'volumeLiters': t.volumeLiters,
+            'capacityLiters': t.capacityLiters,
+            'timestamp': t.timestamp.toIso8601String(),
+            'status': t.status,
+          },
+        )
+        .toList();
+
     await prefs.setString(_tankCacheKey, jsonEncode(tankMaps));
     await _updateCacheTimestamp();
   }
@@ -46,16 +54,20 @@ class CacheService {
   /// Cache pump status
   Future<void> cachePumps(List<PumpStatus> pumps) async {
     final prefs = await SharedPreferences.getInstance();
-    final pumpMaps = pumps.map((p) => {
-      'pumpId': p.pumpId,
-      'isActive': p.isActive,
-      'flowRate': p.flowRate,
-      'pressure': p.pressure,
-      'lastToggled': p.lastToggled.toIso8601String(),
-      'controlMode': p.controlMode,
-      'zone': p.zone,
-    }).toList();
-    
+    final pumpMaps = pumps
+        .map(
+          (p) => {
+            'pumpId': p.pumpId,
+            'isActive': p.isActive,
+            'flowRate': p.flowRate,
+            'pressure': p.pressure,
+            'lastToggled': p.lastToggled.toIso8601String(),
+            'controlMode': p.controlMode,
+            'zone': p.zone,
+          },
+        )
+        .toList();
+
     await prefs.setString(_pumpCacheKey, jsonEncode(pumpMaps));
     await _updateCacheTimestamp();
   }
@@ -68,13 +80,17 @@ class CacheService {
 
     try {
       final List<dynamic> decoded = jsonDecode(cached);
-      return decoded.map((map) => SensorData(
-        sensorId: map['sensorId'],
-        moistureLevel: map['moistureLevel'],
-        timestamp: DateTime.parse(map['timestamp']),
-        status: map['status'],
-        location: map['location'],
-      )).toList();
+      return decoded
+          .map(
+            (map) => SensorData(
+              sensorId: map['sensorId'],
+              moistureLevel: map['moistureLevel'],
+              timestamp: DateTime.parse(map['timestamp']),
+              status: map['status'],
+              location: map['location'],
+            ),
+          )
+          .toList();
     } catch (e) {
       return null;
     }
@@ -88,14 +104,18 @@ class CacheService {
 
     try {
       final List<dynamic> decoded = jsonDecode(cached);
-      return decoded.map((map) => TankLevel(
-        tankId: map['tankId'],
-        levelPercentage: map['levelPercentage'],
-        volumeLiters: map['volumeLiters'],
-        capacityLiters: map['capacityLiters'],
-        timestamp: DateTime.parse(map['timestamp']),
-        status: map['status'],
-      )).toList();
+      return decoded
+          .map(
+            (map) => TankLevel(
+              tankId: map['tankId'],
+              levelPercentage: map['levelPercentage'],
+              volumeLiters: map['volumeLiters'],
+              capacityLiters: map['capacityLiters'],
+              timestamp: DateTime.parse(map['timestamp']),
+              status: map['status'],
+            ),
+          )
+          .toList();
     } catch (e) {
       return null;
     }
@@ -109,15 +129,19 @@ class CacheService {
 
     try {
       final List<dynamic> decoded = jsonDecode(cached);
-      return decoded.map((map) => PumpStatus(
-        pumpId: map['pumpId'],
-        isActive: map['isActive'],
-        flowRate: map['flowRate'],
-        pressure: map['pressure'],
-        lastToggled: DateTime.parse(map['lastToggled']),
-        controlMode: map['controlMode'],
-        zone: map['zone'],
-      )).toList();
+      return decoded
+          .map(
+            (map) => PumpStatus(
+              pumpId: map['pumpId'],
+              isActive: map['isActive'],
+              flowRate: map['flowRate'],
+              pressure: map['pressure'],
+              lastToggled: DateTime.parse(map['lastToggled']),
+              controlMode: map['controlMode'],
+              zone: map['zone'],
+            ),
+          )
+          .toList();
     } catch (e) {
       return null;
     }
@@ -136,13 +160,13 @@ class CacheService {
     final prefs = await SharedPreferences.getInstance();
     final cached = prefs.getString(_pendingCommandsKey) ?? '[]';
     final List<dynamic> commands = jsonDecode(cached);
-    
+
     commands.add({
       'pumpId': pumpId,
       'turnOn': turnOn,
       'timestamp': DateTime.now().toIso8601String(),
     });
-    
+
     await prefs.setString(_pendingCommandsKey, jsonEncode(commands));
   }
 
@@ -161,7 +185,9 @@ class CacheService {
   }
 
   /// Check if cached data is stale (older than threshold)
-  Future<bool> isCacheStale({Duration threshold = const Duration(minutes: 5)}) async {
+  Future<bool> isCacheStale({
+    Duration threshold = const Duration(minutes: 5),
+  }) async {
     final lastUpdate = await getLastCacheUpdate();
     if (lastUpdate == null) return true;
     return DateTime.now().difference(lastUpdate) > threshold;

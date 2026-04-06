@@ -63,5 +63,11 @@ class SensorData extends Equatable {
   }
 
   @override
-  List<Object?> get props => [sensorId, moistureLevel, timestamp, status, location];
+  List<Object?> get props => [
+    sensorId,
+    moistureLevel,
+    timestamp,
+    status,
+    location,
+  ];
 }

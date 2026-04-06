@@ -39,5 +39,11 @@ class WaterUsage extends Equatable {
   }
 
   @override
-  List<Object?> get props => [date, litersUsed, litersSaved, activationCount, averageMoisture];
+  List<Object?> get props => [
+    date,
+    litersUsed,
+    litersSaved,
+    activationCount,
+    averageMoisture,
+  ];
 }

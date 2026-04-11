@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:firebase_database/firebase_database.dart';
 import '../models/sensor_data.dart';
 import '../models/tank_level.dart';
+import '../models/pump_status.dart';
 import 'cache_service.dart';
 
 /// Service for real-time telemetry data streaming from Firebase
@@ -15,20 +16,24 @@ class TelemetryService {
   // StreamControllers for real-time data
   final _sensorDataController = StreamController<List<SensorData>>.broadcast();
   final _tankLevelController = StreamController<List<TankLevel>>.broadcast();
+  final _pumpStatusController = StreamController<List<PumpStatus>>.broadcast();
 
   // Database references
   DatabaseReference? _sensorsRef;
   DatabaseReference? _tanksRef;
+  DatabaseReference? _pumpsRef;
 
   // Subscriptions
   StreamSubscription? _sensorSubscription;
   StreamSubscription? _tankSubscription;
+  StreamSubscription? _pumpSubscription;
 
   TelemetryService({required this.userId}) {
     try {
       _database = FirebaseDatabase.instance;
       _sensorsRef = _database!.ref('users/$userId/moisture_data'); // Aligned with user-specific structure
       _tanksRef = _database!.ref('tanks');
+      _pumpsRef = _database!.ref('pumps');
       _useFirebase = true;
     } catch (e) {
       // Firebase not initialized, will use cache data
@@ -41,6 +46,9 @@ class TelemetryService {
 
   /// Stream of tank level updates
   Stream<List<TankLevel>> get tankLevelStream => _tankLevelController.stream;
+
+  /// Stream of pump status updates
+  Stream<List<PumpStatus>> get pumpStatusStream => _pumpStatusController.stream;
 
   /// Start listening to real-time sensor data
   void startSensorMonitoring() {
@@ -135,6 +143,34 @@ class TelemetryService {
     }
   }
 
+  /// Start listening to real-time pump/flow data
+  void startPumpMonitoring() {
+    if (!_useFirebase || _pumpsRef == null) {
+      return;
+    }
+
+    try {
+      _pumpSubscription = _pumpsRef!.onValue.listen((event) {
+        final data = event.snapshot.value;
+        if (data != null && data is Map) {
+          final List<PumpStatus> pumps = [];
+          data.forEach((key, value) {
+            if (value is Map) {
+              final mapValue = Map<String, dynamic>.from(value);
+              mapValue['pumpId'] ??= key;
+              pumps.add(PumpStatus.fromJson(mapValue));
+            }
+          });
+          _pumpStatusController.add(pumps);
+        }
+      }, onError: (error) {
+        debugPrint('TelemetryService ERROR (Pumps): $error');
+      });
+    } catch (e) {
+      debugPrint('TelemetryService: Exception during pump monitor setup: $e');
+    }
+  }
+
   /// Get latest sensor reading
   Future<SensorData?> getLatestSensorData(String sensorId) async {
     if (!_useFirebase || _sensorsRef == null) return null;
@@ -178,8 +214,10 @@ class TelemetryService {
   void dispose() {
     _sensorSubscription?.cancel();
     _tankSubscription?.cancel();
+    _pumpSubscription?.cancel();
     _sensorDataController.close();
     _tankLevelController.close();
+    _pumpStatusController.close();
   }
 
   /// Load cached sensors for offline mode

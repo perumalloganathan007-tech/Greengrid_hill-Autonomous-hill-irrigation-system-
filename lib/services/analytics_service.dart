@@ -1,4 +1,5 @@
 import 'package:firebase_database/firebase_database.dart';
+import 'package:intl/intl.dart';
 import '../models/water_usage.dart';
 
 /// Service for retrieving and analyzing historical water usage data
@@ -68,6 +69,61 @@ class AnalyticsService {
     final endDate = DateTime.now();
     final startDate = endDate.subtract(const Duration(days: 30));
     return getUsageData(startDate: startDate, endDate: endDate);
+  }
+
+  /// Get hourly usage for the current day
+  /// Assumes a path analytics/hourly_usage exists or logic to fetch granular data
+  Future<List<Map<String, dynamic>>> getHourlyUsageDetail(DateTime date) async {
+    if (!_useFirebase || _database == null) {
+      return [];
+    }
+
+    final dateStr = DateFormat('yyyy-MM-dd').format(date);
+    final ref = _database!.ref('analytics/hourly_usage/$dateStr');
+
+    try {
+      final snapshot = await ref.get();
+      if (snapshot.exists && snapshot.value != null) {
+        final data = snapshot.value as Map;
+        final List<Map<String, dynamic>> hourlyData = [];
+        data.forEach((key, value) {
+          hourlyData.add({
+            'hour': int.tryParse(key.toString()) ?? 0,
+            'litersUsed': (value['litersUsed'] as num).toDouble(),
+          });
+        });
+        hourlyData.sort((a, b) => a['hour'].compareTo(b['hour']));
+        return hourlyData;
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// Get monthly summarized usage for a year
+  Future<List<Map<String, dynamic>>> getYearlySummarizedUsage(int year) async {
+    final startDate = DateTime(year, 1, 1);
+    final endDate = DateTime(year, 12, 31, 23, 59, 59);
+    
+    final dailyData = await getUsageData(startDate: startDate, endDate: endDate);
+    if (dailyData.isEmpty) return [];
+
+    // Group by month
+    final Map<int, double> monthlyTotals = {};
+    for (var usage in dailyData) {
+      final month = usage.date.month;
+      monthlyTotals[month] = (monthlyTotals[month] ?? 0.0) + usage.litersUsed;
+    }
+
+    final List<Map<String, dynamic>> yearlyData = [];
+    for (int i = 1; i <= 12; i++) {
+      yearlyData.add({
+        'month': i,
+        'litersUsed': monthlyTotals[i] ?? 0.0,
+      });
+    }
+    return yearlyData;
   }
 
   /// Calculate total liters saved in a date range

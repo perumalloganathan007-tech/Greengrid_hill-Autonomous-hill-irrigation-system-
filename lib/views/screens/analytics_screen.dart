@@ -1,7 +1,11 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
 import '../../models/water_usage.dart';
+import '../../models/pump_status.dart';
 import '../../services/analytics_service.dart';
+import '../../services/telemetry_service.dart';
+import '../widgets/water_flow_gauge_widget.dart';
 import 'package:intl/intl.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -23,6 +27,15 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   bool _isLoading = true;
   String _selectedPeriod = 'Week';
   
+  // New state for Day and Year
+  List<Map<String, dynamic>> _hourlyData = [];
+  List<Map<String, dynamic>> _yearlyData = [];
+  List<PumpStatus> _pumps = [];
+  StreamSubscription? _pumpSubscription;
+  late final TelemetryService _telemetryService = TelemetryService(
+    userId: widget.userId ?? FirebaseAuth.instance.currentUser?.uid ?? 'test_user',
+  );
+  
   double _totalUsed = 0.0;
   double _totalSaved = 0.0;
   double _efficiency = 0.0;
@@ -33,6 +46,25 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   void initState() {
     super.initState();
     _loadAnalytics();
+    _startLiveMonitoring();
+  }
+
+  void _startLiveMonitoring() {
+    _telemetryService.startPumpMonitoring();
+    _pumpSubscription = _telemetryService.pumpStatusStream.listen((pumps) {
+      if (mounted) {
+        setState(() {
+          _pumps = pumps;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _pumpSubscription?.cancel();
+    _telemetryService.dispose();
+    super.dispose();
   }
 
   Future<void> _loadAnalytics() async {
@@ -43,12 +75,21 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
       DateTime endDate = DateTime.now();
       DateTime startDate;
 
-      if (_selectedPeriod == 'Week') {
+      if (_selectedPeriod == 'Day') {
+        _hourlyData = await _analyticsService.getHourlyUsageDetail(endDate);
+        startDate = DateTime(endDate.year, endDate.month, endDate.day);
+        data = []; // Not used for Day view
+      } else if (_selectedPeriod == 'Week') {
         data = await _analyticsService.getWeeklyUsage();
         startDate = endDate.subtract(const Duration(days: 7));
-      } else {
+      } else if (_selectedPeriod == 'Month') {
         data = await _analyticsService.getMonthlyUsage();
         startDate = endDate.subtract(const Duration(days: 30));
+      } else {
+        // Year
+        _yearlyData = await _analyticsService.getYearlySummarizedUsage(endDate.year);
+        startDate = DateTime(endDate.year, 1, 1);
+        data = []; // Not used for Year view
       }
 
       // Calculate statistics
@@ -127,19 +168,42 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                         ),
                       )
                     else ...[
+                      if (_selectedPeriod == 'Day' && _pumps.isNotEmpty) ...[
+                        _buildSectionHeader('Real-time Flow Monitoring'),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          height: 300,
+                          child: ListView.separated(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: _pumps.length,
+                            separatorBuilder: (c, i) => const SizedBox(width: 16),
+                            itemBuilder: (c, i) => SizedBox(
+                              width: 280,
+                              child: WaterFlowGaugeWidget(
+                                flowRate: _pumps[i].flowRate,
+                                pumpId: _pumps[i].pumpId,
+                                isActive: _pumps[i].isActive,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                      ],
                       _buildStatisticsCards(),
                       const SizedBox(height: 24),
-                      _buildSectionHeader('Water Conservation'),
+                      _buildSectionHeader('Usage Analysis'),
                       const SizedBox(height: 8),
-                      _buildSavingsChart(),
+                      _buildMainUsageChart(),
                       const SizedBox(height: 24),
-                      _buildSectionHeader('Daily Usage Trend'),
-                      const SizedBox(height: 8),
-                      _buildUsageChart(),
-                      const SizedBox(height: 24),
-                      _buildSectionHeader('Irrigation Activity'),
-                      const SizedBox(height: 8),
-                      _buildActivationChart(),
+                      if (_selectedPeriod == 'Week' || _selectedPeriod == 'Month') ...[
+                        _buildSectionHeader('Water Conservation'),
+                        const SizedBox(height: 8),
+                        _buildSavingsChart(),
+                        const SizedBox(height: 24),
+                        _buildSectionHeader('Irrigation Activity'),
+                        const SizedBox(height: 8),
+                        _buildActivationChart(),
+                      ],
                     ],
                   ],
                 ),
@@ -151,8 +215,10 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   Widget _buildPeriodSelector() {
     return SegmentedButton<String>(
       segments: const [
-        ButtonSegment(value: 'Week', label: Text('Last 7 Days')),
-        ButtonSegment(value: 'Month', label: Text('Last 30 Days')),
+        ButtonSegment(value: 'Day', label: Text('Today')),
+        ButtonSegment(value: 'Week', label: Text('Week')),
+        ButtonSegment(value: 'Month', label: Text('Month')),
+        ButtonSegment(value: 'Year', label: Text('Year')),
       ],
       selected: {_selectedPeriod},
       onSelectionChanged: (Set<String> selected) {
@@ -339,33 +405,68 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     );
   }
 
-  Widget _buildUsageChart() {
+  Widget _buildMainUsageChart() {
+    String yAxisTitle = _selectedPeriod == 'Day' ? 'Flow Rate (L/min)' : 'Liters';
+    
     return Card(
       elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: SizedBox(
-          height: 250,
+          height: 300,
           child: SfCartesianChart(
-            primaryXAxis: const CategoryAxis(),
-            primaryYAxis: const NumericAxis(
-              title: AxisTitle(text: 'Liters'),
+            primaryXAxis: _selectedPeriod == 'Day' 
+                ? const NumericAxis(title: AxisTitle(text: 'Hour of Day (24h)'), interval: 4)
+                : const CategoryAxis(),
+            primaryYAxis: NumericAxis(
+              title: AxisTitle(text: yAxisTitle),
+              labelFormat: '{value}',
             ),
             tooltipBehavior: TooltipBehavior(enable: true),
+            legend: const Legend(isVisible: false),
             series: <CartesianSeries>[
-              LineSeries<WaterUsage, String>(
-                dataSource: _weeklyData,
-                xValueMapper: (WaterUsage usage, _) => DateFormat('MMM d').format(usage.date),
-                yValueMapper: (WaterUsage usage, _) => usage.litersUsed,
-                color: Colors.blue,
-                markerSettings: const MarkerSettings(isVisible: true),
-              ),
+              if (_selectedPeriod == 'Day')
+                AreaSeries<Map<String, dynamic>, int>(
+                  name: 'Flow Level',
+                  dataSource: _hourlyData,
+                  xValueMapper: (data, _) => data['hour'] as int,
+                  yValueMapper: (data, _) => data['litersUsed'] as double,
+                  color: Colors.blue.withValues(alpha: 0.3),
+                  borderColor: Colors.blue,
+                  borderWidth: 2,
+                )
+              else if (_selectedPeriod == 'Year')
+                ColumnSeries<Map<String, dynamic>, String>(
+                  name: 'Monthly Total',
+                  dataSource: _yearlyData,
+                  xValueMapper: (data, _) => DateFormat('MMM').format(DateTime(2026, data['month'] as int)),
+                  yValueMapper: (data, _) => data['litersUsed'] as double,
+                  color: Colors.blue,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(4),
+                    topRight: Radius.circular(4),
+                  ),
+                )
+              else
+                LineSeries<WaterUsage, String>(
+                  name: 'Daily Usage',
+                  dataSource: _weeklyData,
+                  xValueMapper: (WaterUsage usage, _) => 
+                      _selectedPeriod == 'Week' 
+                          ? DateFormat('E').format(usage.date) 
+                          : DateFormat('MMM d').format(usage.date),
+                  yValueMapper: (WaterUsage usage, _) => usage.litersUsed,
+                  color: Colors.blue,
+                  markerSettings: const MarkerSettings(isVisible: true),
+                ),
             ],
           ),
         ),
       ),
     );
   }
+
 
   Widget _buildActivationChart() {
     return Card(

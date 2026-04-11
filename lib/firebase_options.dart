@@ -42,32 +42,31 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyCkC9bnmFI3SjQbJCVUcYKtjiIvD54JoHfw',
-    appId: '1:810444862955:web:994f788cc82da7a9c655ae',
-    messagingSenderId: '810444862955',
-    projectId: 'green-hill-2e19e',
-    authDomain: 'green-hill-2e19e.firebaseapp.com',
-    databaseURL: 'https://green-hill-2e19e-default-rtdb.asia-southeast1.firebasedatabase.app',
-    storageBucket: 'green-hill-2e19e.firebasestorage.app',
-    measurementId: 'G-R7JQ41VYKQ',
+    apiKey: 'AIzaSyD2tjiYP4KgFh_ClomJMtLFBn_4Y9M_eT4',
+    appId: '1:100159620207:web:50cf0ed26bc98a14c48d6a',
+    messagingSenderId: '100159620207',
+    projectId: 'greengrid-hill',
+    authDomain: 'greengrid-hill.firebaseapp.com',
+    databaseURL: 'https://greengrid-hill-default-rtdb.firebaseio.com',
+    storageBucket: 'greengrid-hill.appspot.com',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyCkC9bnmFI3SjQbJCVUcYKtjiIvD54JoHfw',
-    appId: '1:810444862955:android:YOUR_ANDROID_APP_ID', // Requires google-services.json
-    messagingSenderId: '810444862955',
-    projectId: 'green-hill-2e19e',
-    databaseURL: 'https://green-hill-2e19e-default-rtdb.asia-southeast1.firebasedatabase.app',
-    storageBucket: 'green-hill-2e19e.firebasestorage.app',
+    apiKey: 'AIzaSyD2tjiYP4KgFh_ClomJMtLFBn_4Y9M_eT4',
+    appId: '1:100159620207:android:com.greengrid.greengridhill',
+    messagingSenderId: '100159620207',
+    projectId: 'greengrid-hill',
+    databaseURL: 'https://greengrid-hill-default-rtdb.firebaseio.com',
+    storageBucket: 'greengrid-hill.appspot.com',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyCkC9bnmFI3SjQbJCVUcYKtjiIvD54JoHfw',
-    appId: '1:810444862955:ios:YOUR_IOS_APP_ID', // Requires GoogleService-Info.plist
-    messagingSenderId: '810444862955',
-    projectId: 'green-hill-2e19e',
-    databaseURL: 'https://green-hill-2e19e-default-rtdb.asia-southeast1.firebasedatabase.app',
-    storageBucket: 'green-hill-2e19e.firebasestorage.app',
+    apiKey: 'AIzaSyD2tjiYP4KgFh_ClomJMtLFBn_4Y9M_eT4',
+    appId: '1:100159620207:ios:com.greengrid.greengridhill',
+    messagingSenderId: '100159620207',
+    projectId: 'greengrid-hill',
+    databaseURL: 'https://greengrid-hill-default-rtdb.firebaseio.com',
+    storageBucket: 'greengrid-hill.appspot.com',
     iosBundleId: 'com.greengrid.greengridhill',
   );
 }

@@ -7,6 +7,7 @@ class SensorData extends Equatable {
   final DateTime timestamp;
   final String status; // "Safe", "Critical", "Warning"
   final String location; // e.g., "Zone A", "Hillside Top"
+  final double? temperature; // Celsius
 
   const SensorData({
     required this.sensorId,
@@ -14,6 +15,7 @@ class SensorData extends Equatable {
     required this.timestamp,
     required this.status,
     required this.location,
+    this.temperature,
   });
 
   /// Determine status based on moisture level
@@ -21,6 +23,7 @@ class SensorData extends Equatable {
     required String sensorId,
     required double moistureLevel,
     required String location,
+    double? temperature,
   }) {
     String status;
     if (moistureLevel < 20) {
@@ -37,6 +40,7 @@ class SensorData extends Equatable {
       timestamp: DateTime.now(),
       status: status,
       location: location,
+      temperature: temperature,
     );
   }
 
@@ -48,6 +52,7 @@ class SensorData extends Equatable {
       timestamp: DateTime.parse(json['timestamp'] as String),
       status: json['status'] as String,
       location: json['location'] as String,
+      temperature: json['temperature'] != null ? (json['temperature'] as num).toDouble() : null,
     );
   }
 
@@ -59,6 +64,7 @@ class SensorData extends Equatable {
       'timestamp': timestamp.toIso8601String(),
       'status': status,
       'location': location,
+      if (temperature != null) 'temperature': temperature,
     };
   }
 
@@ -69,5 +75,6 @@ class SensorData extends Equatable {
     timestamp,
     status,
     location,
+    temperature,
   ];
 }

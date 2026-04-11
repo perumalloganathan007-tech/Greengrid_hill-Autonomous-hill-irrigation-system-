@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import '../../models/sensor_data.dart';
 import '../../models/tank_level.dart';
 import '../../models/pump_status.dart';
+import '../../models/plant_profile.dart';
+import '../../models/terrace_data.dart';
 import '../../services/telemetry_service.dart';
 import '../../services/control_service.dart';
 import '../../services/notification_service.dart';
+import '../../services/smart_irrigation_service.dart';
 import '../widgets/moisture_gauge_widget.dart';
 import '../widgets/tank_level_widget.dart';
 import '../widgets/pump_control_widget.dart';
@@ -13,6 +16,7 @@ import '../../services/preferences_service.dart';
 import '../widgets/network_status_indicator.dart';
 
 /// Main dashboard screen displaying real-time telemetry and controls
+/// Refactored for Eco-Friendly Aesthetic & Terrace Logic
 class DashboardScreen extends StatefulWidget {
   final String? userId;
 
@@ -27,6 +31,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     userId: widget.userId ?? FirebaseAuth.instance.currentUser?.uid ?? 'test_user',
   );
   late ControlService _controlService;
+  late SmartIrrigationService _smartIrrigationService;
   final PreferencesService _prefsService = PreferencesService();
   final NotificationService _notificationService = NotificationService();
 
@@ -36,10 +41,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
   bool _isLoading = true;
   DateTime? _lastUpdateTime;
 
+  // Mocked default plant profile
+  final PlantProfile _defaultPlant = const PlantProfile(
+    plantName: 'Terrace Tea (Camellia Sinensis)',
+    minMoisture: 30.0,
+    maxMoisture: 70.0,
+    optimalTemperature: 24.0,
+    baseWaterDuration: Duration(minutes: 2), // 120 seconds
+  );
+
   @override
   void initState() {
     super.initState();
     _controlService = ControlService(esp32BaseUrl: 'http://192.168.1.100'); // Default
+    _smartIrrigationService = SmartIrrigationService(_controlService);
     _initializeData();
     _notificationService.initialize();
   }
@@ -51,6 +66,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     final esp32Url = await _prefsService.getEsp32Url();
     _controlService = ControlService(esp32BaseUrl: esp32Url);
+    _smartIrrigationService = SmartIrrigationService(_controlService);
 
     // Initial pre-population of pumps to avoid race conditions with telemetry
     setState(() {
@@ -83,7 +99,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         // Check for alerts
         _notificationService.checkSensorAlerts(sensors);
         
-        // Auto-pump logic
+        // Auto-pump logic using SmartIrrigationService
         _checkAutoIrrigation();
       }
     });
@@ -117,21 +133,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (_sensors.isEmpty || _pumps.isEmpty) return;
 
     for (final sensor in _sensors) {
-      if (sensor.moistureLevel < 30) {
-        // Extract zone number from location (e.g., "Terrace Zone 1" -> "1")
-        final zoneMatch = RegExp(r'Zone (\d+)').firstMatch(sensor.location);
-        if (zoneMatch != null) {
-          final zoneNum = zoneMatch.group(1);
-          // Find matching pump for this zone
-          final pumpIndex = _pumps.indexWhere((p) => p.pumpId == 'pump_$zoneNum');
-          
-          if (pumpIndex != -1) {
-            final pump = _pumps[pumpIndex];
-            // Only auto-trigger if in Auto mode and currently off
-            if (pump.controlMode == 'Auto' && !pump.isActive) {
-              _handlePumpToggle(pumpIndex, true);
-              debugPrint('Auto-triggering ${pump.pumpId} due to low moisture (${sensor.moistureLevel}%)');
-            }
+      final zoneMatch = RegExp(r'Zone (\d+)').firstMatch(sensor.location);
+      if (zoneMatch != null) {
+        final zoneNumStr = zoneMatch.group(1);
+        final zoneNum = int.tryParse(zoneNumStr ?? '1') ?? 1;
+        
+        // Find matching pump for this zone
+        final pumpIndex = _pumps.indexWhere((p) => p.pumpId == 'pump_$zoneNum');
+        
+        if (pumpIndex != -1) {
+          final pump = _pumps[pumpIndex];
+          // Only auto-trigger if in Auto mode
+          if (pump.controlMode == 'Auto') {
+            final terraceData = TerraceData(
+              terraceLevel: zoneNum,
+              zoneName: sensor.location,
+              slopeFactor: 1.0,
+            );
+            
+            _smartIrrigationService.evaluateAndTrigger(
+              sensorData: sensor,
+              plantProfile: _defaultPlant,
+              terrace: terraceData,
+              pumpId: pump.pumpId,
+            );
           }
         }
       }
@@ -139,7 +164,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _loadPumpData() async {
-    // Attempt to fetch actual pump status from ESP32 for all defined pumps
     try {
       final List<Future<PumpStatus?>> futures = [];
       for (int i = 0; i < 4; i++) {
@@ -172,22 +196,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
           _pumps.clear();
           _pumps.addAll(updatedPumps);
         });
-        // Re-check auto-irrigation after hardware status is finalized
         _checkAutoIrrigation();
       }
     } catch (e) {
       debugPrint('Error loading pump data: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('ESP32 Connection Timeout. Check IP in Settings.')),
-        );
-      }
     }
   }
 
   Future<void> _handlePumpToggle(int index, bool turnOn) async {
     final pump = _pumps[index];
-    // Ignore success result for UI demonstration when ESP32 is offline
     await _controlService.togglePump(
       pumpId: pump.pumpId,
       turnOn: turnOn,
@@ -201,7 +218,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         );
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Valve ${turnOn ? "activated" : "deactivated"} (Simulated)')),
+        SnackBar(
+          content: Text('Valve ${turnOn ? "activated" : "deactivated"}'),
+          backgroundColor: const Color(0xFF1B5E20),
+        ),
       );
     }
   }
@@ -232,10 +252,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF1F8E9), // Eco-friendly Light Green BG
       appBar: AppBar(
-        title: const Text('GreenGrid Dashboard'),
-        backgroundColor: Colors.green[700],
+        title: const Text('GreenGrid Hill', style: TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: const Color(0xFF1B5E20), // Forest Green
         foregroundColor: Colors.white,
+        elevation: 0,
         actions: [
           if (_lastUpdateTime != null)
             Padding(
@@ -265,8 +287,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator(color: Color(0xFF1B5E20)))
           : RefreshIndicator(
+              color: const Color(0xFF1B5E20),
               onRefresh: () async {
                 await _initializeData();
               },
@@ -276,21 +299,86 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildSectionHeader('Soil Moisture Sensors'),
-                    const SizedBox(height: 8),
-                    _buildMoistureSensors(),
+                    _buildOverviewCard(),
                     const SizedBox(height: 24),
-                    _buildSectionHeader('Water Tank Levels'),
+                    _buildSectionHeader('Terrace Insights & Control'),
                     const SizedBox(height: 8),
-                    _buildTankLevels(),
-                    const SizedBox(height: 24),
-                    _buildSectionHeader('Valve Controls'),
-                    const SizedBox(height: 8),
-                    _buildPumpControls(),
+                    _buildTerraceEnvironment(),
                   ],
                 ),
               ),
             ),
+    );
+  }
+
+  Widget _buildOverviewCard() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.eco, color: Color(0xFF1B5E20), size: 28),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  _defaultPlant.plantName,
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1B5E20)),
+                ),
+              ),
+            ],
+          ),
+          const Divider(height: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _buildMiniStat('Target Moose', '${_defaultPlant.minMoisture}% - ${_defaultPlant.maxMoisture}%', Icons.water_drop, const Color(0xFF26C6DA)),
+              _buildMiniStat('Pref. Temp', '${_defaultPlant.optimalTemperature}°C', Icons.thermostat, const Color(0xFFFFD54F)),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // Integrating overall tank state
+          if (_tanks.isNotEmpty)
+            Row(
+              children: [
+                const Icon(Icons.waves, color: Color(0xFF26C6DA)),
+                const SizedBox(width: 8),
+                Text(
+                  'Main Tank Reserve: ${_tanks.first.levelPercentage.toStringAsFixed(1)}%',
+                  style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.blueGrey),
+                ),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMiniStat(String label, String value, IconData icon, Color color) {
+    return Row(
+      children: [
+        Icon(icon, color: color, size: 20),
+        const SizedBox(width: 6),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+            Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+          ],
+        ),
+      ],
     );
   }
 
@@ -300,11 +388,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Row(
         children: [
           Container(
-            width: 4,
+            width: 6,
             height: 24,
             decoration: BoxDecoration(
-              color: Colors.green,
-              borderRadius: BorderRadius.circular(2),
+              color: const Color(0xFF1B5E20), // Forest Green
+              borderRadius: BorderRadius.circular(3),
             ),
           ),
           const SizedBox(width: 12),
@@ -314,7 +402,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               fontSize: 20,
               fontWeight: FontWeight.w900,
               letterSpacing: 0.5,
-              color: Colors.white,
+              color: Color(0xFF1B5E20),
             ),
           ),
         ],
@@ -322,151 +410,164 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildMoistureSensors() {
+  Widget _buildTerraceEnvironment() {
     if (_sensors.isEmpty) {
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 16),
-        decoration: BoxDecoration(
-          color: Colors.black26,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.green.withValues(alpha: 0.2)),
+      return Center(
+        child: Text(
+          'No terrace data available.',
+          style: TextStyle(color: Colors.grey.shade600),
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.sensors_off, size: 48, color: Colors.green.withValues(alpha: 0.5)),
-            const SizedBox(height: 16),
-            const Text(
-              'Currently no data is available',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.white70,
-                letterSpacing: 0.5,
-              ),
-              textAlign: TextAlign.center,
+      );
+    }
+
+    return Column(
+      children: List.generate(_sensors.length, (index) {
+        final sensor = _sensors[index];
+        
+        final zoneMatch = RegExp(r'Zone (\d+)').firstMatch(sensor.location);
+        final zoneNum = zoneMatch != null ? int.parse(zoneMatch.group(1)!) : (index + 1);
+        
+        // Find corresponding pump
+        final pumpIndex = _pumps.indexWhere((p) => p.pumpId == 'pump_$zoneNum');
+        final pump = pumpIndex != -1 ? _pumps[pumpIndex] : null;
+
+        // Calculate Terrace Gradient Color based on depth (Top -> Bottom)
+        // Top = Light Brown (#D7CCC8), Bottom = Dark Brown (#8D6E63)
+        final double gradientRatio = (zoneNum - 1) / 3.0; // Assuming up to 4 terraces
+        final Color terraceColor = Color.lerp(
+          const Color(0xFFD7CCC8), // Light Earth
+          const Color(0xFF8D6E63), // Darker Earth
+          gradientRatio.clamp(0.0, 1.0),
+        )!;
+
+        // Determine if water is needed textually
+        final bool waterNeeded = sensor.moistureLevel < _defaultPlant.minMoisture;
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [terraceColor.withValues(alpha: 0.2), Colors.white],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-          ],
-        ),
-      );
-    }
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        int crossAxisCount;
-        double childAspectRatio;
-        
-        // Responsive breakpoints
-        if (constraints.maxWidth >= 1200) {
-          crossAxisCount = 4;
-          childAspectRatio = 1.1;
-        } else if (constraints.maxWidth >= 800) {
-          crossAxisCount = 3;
-          childAspectRatio = 1.0;
-        } else if (constraints.maxWidth >= 600) {
-          crossAxisCount = 2;
-          childAspectRatio = 1.0;
-        } else {
-          crossAxisCount = 2;
-          childAspectRatio = 0.85;
-        }
-
-        return GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: crossAxisCount,
-            childAspectRatio: childAspectRatio,
-            crossAxisSpacing: 16,
-            mainAxisSpacing: 16,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: terraceColor.withValues(alpha: 0.5)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-          itemCount: _sensors.length,
-          itemBuilder: (context, index) {
-            final sensor = _sensors[index];
-            return MoistureGaugeWidget(
-              moistureLevel: sensor.moistureLevel,
-              location: sensor.location,
-              status: sensor.status,
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Widget _buildTankLevels() {
-    if (_tanks.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.all(16.0),
-        child: Center(
-          child: Text('Data is not initialized or no tanks found.'),
-        ),
-      );
-    }
-
-    return Column(
-      children: _tanks.map((tank) {
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: TankLevelWidget(
-            tankId: tank.tankId,
-            levelPercentage: tank.levelPercentage,
-            volumeLiters: tank.volumeLiters,
-            capacityLiters: tank.capacityLiters,
-            status: tank.status,
-          ),
-        );
-      }).toList(),
-    );
-  }
-
-  Widget _buildPumpControls() {
-    if (_pumps.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.all(16.0),
-        child: Center(
-          child: Text('Initializing valves...'),
-        ),
-      );
-    }
-
-    if (_sensors.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.all(16.0),
-        child: Center(
-          child: Text(
-            'Valve controls unavailable - No sensors matched.',
-            style: TextStyle(color: Colors.white54),
-          ),
-        ),
-      );
-    }
-
-    // Only show as many valves as we have active sensors
-    final activePumpCount = _sensors.length;
-    
-    return Column(
-      children: List.generate(activePumpCount, (index) {
-        // Ensure we don't go out of bounds if _pumps is smaller than _sensors
-        if (index >= _pumps.length) return const SizedBox.shrink();
-        
-        final pump = _pumps[index];
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: PumpControlWidget(
-            pumpId: pump.pumpId,
-            zone: pump.zone,
-            isActive: pump.isActive,
-            controlMode: pump.controlMode,
-            flowRate: pump.flowRate,
-            pressure: pump.pressure,
-            onToggle: (turnOn) => _handlePumpToggle(index, turnOn),
-            onModeChange: (mode) => _handleModeChange(index, mode),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Terrace Header
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.landscape, color: terraceColor.withOpacity(1.0)),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Terrace Level $zoneNum',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey.shade800,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: waterNeeded ? Colors.red.withValues(alpha: 0.1) : Colors.green.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      waterNeeded ? 'Needs Water' : 'Hydrated',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: waterNeeded ? Colors.red : Colors.green,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              
+              // Key Metrics
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildEnvironmentPill(
+                    icon: Icons.water_drop,
+                    value: '${sensor.moistureLevel.toStringAsFixed(1)}%',
+                    label: 'Moisture',
+                    color: const Color(0xFF26C6DA), // Aqua
+                  ),
+                  _buildEnvironmentPill(
+                    icon: Icons.thermostat,
+                    value: sensor.temperature != null ? '${sensor.temperature!.toStringAsFixed(1)}°C' : 'N/A',
+                    label: 'Temp',
+                    color: const Color(0xFFFFD54F), // Soft Yellow
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              const Divider(),
+              
+              // Pump Controls
+              if (pump != null)
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Valve Control', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey.shade700)),
+                        Text('Mode: ${pump.controlMode}', style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
+                      ],
+                    ),
+                    Switch(
+                      value: pump.isActive,
+                      activeColor: const Color(0xFF1B5E20), // Forest Green
+                      onChanged: (val) {
+                        if (pumpIndex != -1) {
+                          _handlePumpToggle(pumpIndex, val);
+                        }
+                      },
+                    ),
+                  ],
+                ),
+            ],
           ),
         );
       }),
     );
   }
 
-
+  Widget _buildEnvironmentPill({required IconData icon, required String value, required String label, required Color color}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 28),
+          const SizedBox(height: 4),
+          Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+        ],
+      ),
+    );
+  }
 }

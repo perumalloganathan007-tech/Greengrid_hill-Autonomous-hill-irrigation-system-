@@ -72,22 +72,27 @@ class TelemetryService {
 
 
 
-  /// Parse moisture data from format "T1:12,T2:37,T3:0"
+  /// Parse moisture data from format "T1:12:30.5,T2:37:25.0" or "T1:12,T2:37"
   List<SensorData> _parseMoistureData(String data) {
     final List<SensorData> sensors = [];
     final parts = data.split(',');
 
     for (var part in parts) {
       final values = part.split(':');
-      if (values.length == 2) {
+      if (values.length >= 2) {
         final sensorId = values[0].trim();
         final moisture = double.tryParse(values[1].trim()) ?? 0.0;
+        double? temp;
+        if (values.length >= 3) {
+          temp = double.tryParse(values[2].trim());
+        }
 
         sensors.add(
           SensorData.fromMoistureLevel(
             sensorId: sensorId,
             moistureLevel: moisture,
             location: 'Terrace Zone ${sensorId.replaceAll('T', '')}',
+            temperature: temp,
           ),
         );
       }

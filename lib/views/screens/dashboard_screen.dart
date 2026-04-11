@@ -443,7 +443,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   value: pump.isActive,
                   onChanged: (val) => _handlePumpToggle(index, val),
                   activeTrackColor: Colors.green.withValues(alpha: 0.3),
-                  activeColor: Colors.green,
+                  activeThumbColor: Colors.green,
                 ),
               ),
               if (pump.isActive)
@@ -459,24 +459,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         );
       }),
-    );
-  }
-
-  Widget _buildEnvironmentPill({required IconData icon, required String value, required String label, required Color color}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 28),
-          const SizedBox(height: 4),
-          Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-        ],
-      ),
     );
   }
 }

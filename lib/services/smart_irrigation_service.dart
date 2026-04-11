@@ -4,15 +4,17 @@ import '../models/sensor_data.dart';
 import '../models/plant_profile.dart';
 import '../models/terrace_data.dart';
 import 'control_service.dart';
+import 'notification_service.dart';
 
 class SmartIrrigationService {
   final ControlService _controlService;
+  final NotificationService _notificationService;
 
   // Track active irrigation tasks to handle cascade logic
   // Map of zone/terrace name to boolean
   final Map<String, bool> _activeIrrigations = {};
 
-  SmartIrrigationService(this._controlService);
+  SmartIrrigationService(this._controlService, this._notificationService);
 
   /// Analyzes the environment and evaluates the Water Needed based on:
   /// Water Needed = f(Plant Type + Soil Moisture + Temperature + Terrace Level)
@@ -68,6 +70,9 @@ class SmartIrrigationService {
       final success = await _controlService.togglePump(pumpId: pumpId, turnOn: true);
 
       if (success) {
+        // Notify the user
+        _notificationService.notifyIrrigationStarted(terrace.zoneName, sensorData.moistureLevel);
+
         // Auto-turn off logic after duration
         Timer(Duration(seconds: baseDurationSeconds), () async {
           await _controlService.togglePump(pumpId: pumpId, turnOn: false);

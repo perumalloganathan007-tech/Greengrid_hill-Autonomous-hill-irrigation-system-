@@ -9,6 +9,8 @@ import 'services/auth_service.dart';
 import 'services/audit_service.dart';
 import 'viewmodels/auth_bloc.dart';
 import 'viewmodels/auth_event.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'l10n/app_localizations.dart';
 
 void main() async {
   try {
@@ -51,12 +53,18 @@ class GreenGridApp extends StatefulWidget {
 
 class _GreenGridAppState extends State<GreenGridApp> {
   ThemeMode _themeMode = ThemeMode.system;
+  Locale? _locale;
   final PreferencesService _prefsService = PreferencesService();
 
   @override
   void initState() {
     super.initState();
-    _loadThemeMode();
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    await _loadThemeMode();
+    await _loadLocale();
   }
 
   Future<void> _loadThemeMode() async {
@@ -70,9 +78,22 @@ class _GreenGridAppState extends State<GreenGridApp> {
     });
   }
 
+  Future<void> _loadLocale() async {
+    final languageCode = await _prefsService.getLanguage();
+    setState(() {
+      _locale = Locale(languageCode);
+    });
+  }
+
   void _updateThemeMode(ThemeMode mode) {
     setState(() {
       _themeMode = mode;
+    });
+  }
+
+  void _updateLocale(Locale locale) {
+    setState(() {
+      _locale = locale;
     });
   }
 
@@ -102,7 +123,24 @@ class _GreenGridAppState extends State<GreenGridApp> {
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
           themeMode: _themeMode,
-          home: AuthWrapper(onThemeChanged: _updateThemeMode),
+          locale: _locale,
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: const [
+            Locale('en'), // English
+            Locale('hi'), // Hindi
+            Locale('ta'), // Tamil
+            Locale('te'), // Telugu
+            Locale('ml'), // Malayalam
+          ],
+          home: AuthWrapper(
+            onThemeChanged: _updateThemeMode,
+            onLocaleChanged: _updateLocale,
+          ),
         ),
       ),
     );

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../viewmodels/auth_bloc.dart';
 import '../../viewmodels/auth_event.dart';
@@ -95,7 +96,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 30),
                     // Title
                     Text(
-                      'Welcome Back',
+                      AppLocalizations.of(context)!.welcomeBack,
                       style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
@@ -104,7 +105,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      'Sign in to continue',
+                      AppLocalizations.of(context)!.signInToContinue,
                       style: TextStyle(
                         fontSize: 16,
                         color: Colors.grey[600],
@@ -129,7 +130,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 controller: _emailController,
                                 keyboardType: TextInputType.emailAddress,
                                 decoration: InputDecoration(
-                                  labelText: 'Email',
+                                  labelText: AppLocalizations.of(context)!.email,
                                   hintText: 'Enter your email',
                                   prefixIcon: const Icon(Icons.email),
                                   border: OutlineInputBorder(
@@ -145,7 +146,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 controller: _passwordController,
                                 obscureText: _obscurePassword,
                                 decoration: InputDecoration(
-                                  labelText: 'Password',
+                                  labelText: AppLocalizations.of(context)!.password,
                                   hintText: 'Enter your password',
                                   prefixIcon: const Icon(Icons.lock),
                                   suffixIcon: IconButton(
@@ -184,7 +185,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                                 });
                                               },
                                       ),
-                                      const Text('Remember me'),
+                                      Text(AppLocalizations.of(context)!.rememberMe),
                                     ],
                                   ),
                                   TextButton(
@@ -199,7 +200,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                               ),
                                             );
                                           },
-                                    child: const Text('Forgot Password?'),
+                                    child: Text(AppLocalizations.of(context)!.forgotPassword),
                                   ),
                                 ],
                               ),
@@ -227,9 +228,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                           ),
                                         ),
                                       )
-                                    : const Text(
-                                        'Sign In',
-                                        style: TextStyle(
+                                    : Text(
+                                        AppLocalizations.of(context)!.signIn,
+                                        style: const TextStyle(
                                           fontSize: 16,
                                           fontWeight: FontWeight.bold,
                                         ),
@@ -245,7 +246,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Text("Don't have an account?"),
+                        Text(AppLocalizations.of(context)!.dontHaveAccount),
                         TextButton(
                           onPressed: isLoading
                               ? null
@@ -257,9 +258,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                     ),
                                   );
                                 },
-                          child: const Text(
-                            'Sign Up',
-                            style: TextStyle(fontWeight: FontWeight.bold),
+                          child: Text(
+                            AppLocalizations.of(context)!.signUp,
+                            style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ),
                       ],

@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 /// Splash screen with app branding
 class SplashScreen extends StatefulWidget {
   final Function(ThemeMode)? onThemeChanged;
+  final Function(Locale)? onLocaleChanged;
   
-  const SplashScreen({super.key, this.onThemeChanged});
+  const SplashScreen({super.key, this.onThemeChanged, this.onLocaleChanged});
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();

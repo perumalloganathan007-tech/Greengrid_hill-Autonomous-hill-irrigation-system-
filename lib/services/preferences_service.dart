@@ -9,6 +9,7 @@ class PreferencesService {
   static const String _keyRefreshInterval = 'refresh_interval';
   static const String _keyFirstLaunch = 'first_launch';
   static const String _keyRememberMe = 'remember_me';
+  static const String _keyLanguage = 'app_language';
 
   SharedPreferences? _prefs;
 
@@ -96,6 +97,17 @@ class PreferencesService {
   Future<void> setRememberMe(bool enabled) async {
     await init();
     await _prefs?.setBool(_keyRememberMe, enabled);
+  }
+
+  /// Language Preference (en/hi/ta/te/ml)
+  Future<String> getLanguage() async {
+    await init();
+    return _prefs?.getString(_keyLanguage) ?? 'en';
+  }
+
+  Future<void> setLanguage(String languageCode) async {
+    await init();
+    await _prefs?.setString(_keyLanguage, languageCode);
   }
 
   /// Clear all preferences

@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_database/firebase_database.dart';
 import '../models/sensor_data.dart';
-import '../models/tank_level.dart';
 import '../models/pump_status.dart';
 import 'cache_service.dart';
 
@@ -15,24 +14,20 @@ class TelemetryService {
 
   // StreamControllers for real-time data
   final _sensorDataController = StreamController<List<SensorData>>.broadcast();
-  final _tankLevelController = StreamController<List<TankLevel>>.broadcast();
   final _pumpStatusController = StreamController<List<PumpStatus>>.broadcast();
 
   // Database references
   DatabaseReference? _sensorsRef;
-  DatabaseReference? _tanksRef;
   DatabaseReference? _pumpsRef;
 
   // Subscriptions
   StreamSubscription? _sensorSubscription;
-  StreamSubscription? _tankSubscription;
   StreamSubscription? _pumpSubscription;
 
   TelemetryService({required this.userId}) {
     try {
       _database = FirebaseDatabase.instance;
-      _sensorsRef = _database!.ref('users/$userId/moisture_data'); // Aligned with user-specific structure
-      _tanksRef = _database!.ref('tanks');
+      _sensorsRef = _database!.ref('users/$userId/moisture_data'); // Corrected to match actual database structure
       _pumpsRef = _database!.ref('pumps');
       _useFirebase = true;
     } catch (e) {
@@ -43,9 +38,6 @@ class TelemetryService {
 
   /// Stream of sensor data updates
   Stream<List<SensorData>> get sensorDataStream => _sensorDataController.stream;
-
-  /// Stream of tank level updates
-  Stream<List<TankLevel>> get tankLevelStream => _tankLevelController.stream;
 
   /// Stream of pump status updates
   Stream<List<PumpStatus>> get pumpStatusStream => _pumpStatusController.stream;
@@ -88,6 +80,7 @@ class TelemetryService {
     for (var part in parts) {
       final values = part.split(':');
       if (values.length >= 2) {
+        // Tagged format "T1:45:25.5" (ID:Moisture:Temp)
         final sensorId = values[0].trim();
         final moisture = double.tryParse(values[1].trim()) ?? 0.0;
         double? temp;
@@ -103,44 +96,22 @@ class TelemetryService {
             temperature: temp,
           ),
         );
+      } else if (values.length == 1 && values[0].trim().isNotEmpty) {
+        // Single value format "45.5"
+        final moisture = double.tryParse(values[0].trim());
+        if (moisture != null) {
+          sensors.add(
+            SensorData.fromMoistureLevel(
+              sensorId: 'T1',
+              moistureLevel: moisture,
+              location: 'Terrace Zone 1',
+            ),
+          );
+        }
       }
     }
 
     return sensors;
-  }
-
-  /// Start listening to real-time tank level data
-  void startTankMonitoring() {
-    if (!_useFirebase || _tanksRef == null) {
-      // Load cached data first
-      _loadCachedTanks();
-      return;
-    }
-
-    try {
-      _tankSubscription = _tanksRef!.onValue.listen((event) {
-        final data = event.snapshot.value;
-        if (data != null && data is Map) {
-          final List<TankLevel> tanks = [];
-          data.forEach((key, value) {
-            if (value is Map) {
-              final mapValue = Map<String, dynamic>.from(value);
-              mapValue['tankId'] ??= key;
-              mapValue['timestamp'] ??= DateTime.now().toIso8601String();
-              // Removed default value assignments as they should be handled by the model or data source
-              tanks.add(TankLevel.fromJson(mapValue));
-            }
-          });
-          _tankLevelController.add(tanks);
-          // Cache for offline use
-          _cacheService.cacheTanks(tanks);
-        }
-      }, onError: (error) {
-        debugPrint('TelemetryService ERROR (Tanks): $error');
-      });
-    } catch (e) {
-      debugPrint('TelemetryService: Exception during tank monitor setup: $e');
-    }
   }
 
   /// Start listening to real-time pump/flow data
@@ -193,30 +164,11 @@ class TelemetryService {
     }
   }
 
-  /// Get latest tank level
-  Future<TankLevel?> getLatestTankLevel(String tankId) async {
-    if (!_useFirebase || _tanksRef == null) return null;
-
-    try {
-      final snapshot = await _tanksRef!.child(tankId).get();
-      if (snapshot.exists && snapshot.value != null) {
-        return TankLevel.fromJson(
-          Map<String, dynamic>.from(snapshot.value as Map),
-        );
-      }
-      return null;
-    } catch (e) {
-      return null;
-    }
-  }
-
   /// Stop all monitoring and close streams
   void dispose() {
     _sensorSubscription?.cancel();
-    _tankSubscription?.cancel();
     _pumpSubscription?.cancel();
     _sensorDataController.close();
-    _tankLevelController.close();
     _pumpStatusController.close();
   }
 
@@ -225,14 +177,6 @@ class TelemetryService {
     final cached = await _cacheService.getCachedSensors();
     if (cached != null && cached.isNotEmpty) {
       _sensorDataController.add(cached);
-    }
-  }
-
-  /// Load cached tanks for offline mode
-  Future<void> _loadCachedTanks() async {
-    final cached = await _cacheService.getCachedTanks();
-    if (cached != null && cached.isNotEmpty) {
-      _tankLevelController.add(cached);
     }
   }
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:syncfusion_flutter_gauges/gauges.dart';
+import '../../utils/constants.dart';
 
 /// Widget to display soil moisture level with radial gauge
 class MoistureGaugeWidget extends StatelessWidget {
@@ -17,29 +18,27 @@ class MoistureGaugeWidget extends StatelessWidget {
   });
 
   Color _getStatusColor() {
-    switch (status) {
-      case 'Critical':
-        return Colors.red;
-      case 'Warning':
-        return Colors.orange;
-      case 'Safe':
-        return Colors.green;
-      default:
-        return Colors.grey;
+    final s = status.toUpperCase();
+    if (s.contains('CRITICAL')) {
+      return Colors.red;
+    } else if (s.contains('WARNING')) {
+      return Colors.orange;
+    } else if (s.contains('SAFE')) {
+      return Colors.green;
     }
+    return Colors.grey;
   }
 
   IconData _getStatusIcon() {
-    switch (status) {
-      case 'Critical':
-        return Icons.water_drop_outlined;
-      case 'Warning':
-        return Icons.warning_amber_rounded;
-      case 'Safe':
-        return Icons.check_circle_outline;
-      default:
-        return Icons.help_outline;
+    final s = status.toUpperCase();
+    if (s.contains('CRITICAL')) {
+      return Icons.water_drop_outlined;
+    } else if (s.contains('WARNING')) {
+      return Icons.warning_amber_rounded;
+    } else if (s.contains('SAFE')) {
+      return Icons.check_circle_outline;
     }
+    return Icons.help_outline;
   }
 
   @override
@@ -63,7 +62,7 @@ class MoistureGaugeWidget extends StatelessWidget {
         ),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(8.0),
+        padding: const EdgeInsets.all(4.0),
         child: Column(
           children: [
             Text(
@@ -105,22 +104,22 @@ class MoistureGaugeWidget extends StatelessWidget {
                     ranges: <GaugeRange>[
                       GaugeRange(
                         startValue: 0,
-                        endValue: 20,
+                        endValue: AppConstants.criticalMoistureLevel,
                         color: Colors.redAccent,
                         startWidth: 0.1,
                         endWidth: 0.1,
                         sizeUnit: GaugeSizeUnit.factor,
                       ),
                       GaugeRange(
-                        startValue: 20,
-                        endValue: 40,
+                        startValue: AppConstants.criticalMoistureLevel,
+                        endValue: AppConstants.warningMoistureLevel,
                         color: Colors.orangeAccent,
                         startWidth: 0.1,
                         endWidth: 0.1,
                         sizeUnit: GaugeSizeUnit.factor,
                       ),
                       GaugeRange(
-                        startValue: 40,
+                        startValue: AppConstants.warningMoistureLevel,
                         endValue: 100,
                         color: const Color(0xFF00E676),
                         startWidth: 0.1,
@@ -176,7 +175,7 @@ class MoistureGaugeWidget extends StatelessWidget {
                             Text(
                               '${moistureLevel.toStringAsFixed(1)}%',
                               style: const TextStyle(
-                                fontSize: 18,
+                                fontSize: 14,
                                 fontWeight: FontWeight.w900,
                                 color: Colors.white,
                                 letterSpacing: -0.5,
@@ -205,15 +204,15 @@ class MoistureGaugeWidget extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: statusColor.withValues(alpha: 0.1),
+                color: statusColor.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(
-                  color: statusColor.withValues(alpha: 0.5),
-                  width: 1,
+                  color: statusColor.withValues(alpha: 0.8),
+                  width: 1.2,
                 ),
               ),
               child: Row(
@@ -222,7 +221,7 @@ class MoistureGaugeWidget extends StatelessWidget {
                   Icon(
                     _getStatusIcon(),
                     color: statusColor,
-                    size: 12,
+                    size: 10,
                   ),
                   const SizedBox(width: 4),
                   Expanded(
@@ -231,7 +230,7 @@ class MoistureGaugeWidget extends StatelessWidget {
                       style: TextStyle(
                         color: statusColor,
                         fontWeight: FontWeight.w900,
-                        fontSize: 9,
+                        fontSize: 8,
                         letterSpacing: 0.8,
                       ),
                       softWrap: false,

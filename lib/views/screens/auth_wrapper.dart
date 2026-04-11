@@ -8,8 +8,9 @@ import 'main_navigation.dart';
 
 class AuthWrapper extends StatelessWidget {
   final Function(ThemeMode)? onThemeChanged;
+  final Function(Locale)? onLocaleChanged;
 
-  const AuthWrapper({super.key, this.onThemeChanged});
+  const AuthWrapper({super.key, this.onThemeChanged, this.onLocaleChanged});
 
   @override
   Widget build(BuildContext context) {
@@ -18,12 +19,16 @@ class AuthWrapper extends StatelessWidget {
         if (state is Authenticated) {
           return MainNavigation(
             onThemeChanged: onThemeChanged,
+            onLocaleChanged: onLocaleChanged,
             user: state.user,
           );
         } else if (state is Unauthenticated) {
           return const LoginScreen();
         } else if (state is AuthInitial || state is AuthLoading) {
-          return SplashScreen(onThemeChanged: onThemeChanged);
+          return SplashScreen(
+            onThemeChanged: onThemeChanged,
+            onLocaleChanged: onLocaleChanged,
+          );
         } else if (state is AuthError) {
           return const LoginScreen(); // Fallback to login on error
         } else {

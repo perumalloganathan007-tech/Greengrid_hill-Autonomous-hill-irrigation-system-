@@ -19,9 +19,9 @@ class AppConstants {
   static const int defaultRefreshInterval = 5; // seconds
   
   // Moisture Thresholds
-  static const double criticalMoistureLevel = 20.0;
-  static const double warningMoistureLevel = 40.0;
-  static const double safeMoistureLevel = 40.0;
+  static const double criticalMoistureLevel = 15.0;
+  static const double warningMoistureLevel = 30.0;
+  static const double safeMoistureLevel = 30.0;
   
   // Tank Thresholds
   static const double tankFullLevel = 80.0;

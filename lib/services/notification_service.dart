@@ -1,6 +1,5 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../models/sensor_data.dart';
-import '../models/tank_level.dart';
 
 /// Service for managing push notifications and alerts
 class NotificationService {
@@ -13,10 +12,8 @@ class NotificationService {
   bool _isInitialized = false;
 
   // Notification thresholds
-  static const double criticalMoistureThreshold = 20.0;
-  static const double warningMoistureThreshold = 35.0;
-  static const double lowTankThreshold = 25.0;
-  static const double criticalTankThreshold = 10.0;
+  static const double criticalMoistureThreshold = 15.0;
+  static const double warningMoistureThreshold = 30.0;
 
   /// Initialize notification service
   Future<void> initialize() async {
@@ -38,7 +35,7 @@ class NotificationService {
 
     try {
       await _notifications.initialize(
-        initSettings,
+        settings: initSettings,
         onDidReceiveNotificationResponse: _onNotificationTapped,
       );
       _isInitialized = true;
@@ -95,32 +92,19 @@ class NotificationService {
     }
   }
 
-  /// Check tank levels and send alerts
-  Future<void> checkTankAlerts(List<TankLevel> tanks) async {
+  /// Send automated irrigation started alert
+  Future<void> notifyIrrigationStarted(String zone, double moisture) async {
     if (!_isInitialized) return;
 
-    for (final tank in tanks) {
-      if (tank.levelPercentage <= criticalTankThreshold) {
-        await _showNotification(
-          id: tank.tankId.hashCode,
-          title: '🚨 Tank Empty Alert',
-          body:
-              '${tank.tankId}: ${tank.levelPercentage.toStringAsFixed(1)}% - Refill immediately!',
-          priority: Priority.max,
-        );
-      } else if (tank.levelPercentage <= lowTankThreshold) {
-        await _showNotification(
-          id: tank.tankId.hashCode,
-          title: '⚠️ Low Tank Level',
-          body:
-              '${tank.tankId}: ${tank.levelPercentage.toStringAsFixed(1)}% - Plan to refill soon',
-          priority: Priority.high,
-        );
-      }
-    }
+    await _showNotification(
+      id: zone.hashCode,
+      title: '💧 Irrigation Started (Auto)',
+      body: '$zone: Moisture is ${moisture.toStringAsFixed(1)}% (Threshold 30%). Smart watering active.',
+      priority: Priority.high,
+    );
   }
 
-  /// Send pump failure alert
+  /// Check pump failure and send alerts
   Future<void> sendPumpFailureAlert(String pumpId, String zone) async {
     if (!_isInitialized) return;
 
@@ -184,7 +168,7 @@ class NotificationService {
       iOS: iosDetails,
     );
 
-    await _notifications.show(id, title, body, details);
+    await _notifications.show(id: id, title: title, body: body, notificationDetails: details);
   }
 
   Importance _getImportance(Priority priority) {
@@ -209,6 +193,6 @@ class NotificationService {
   /// Cancel specific notification
   Future<void> cancel(int id) async {
     if (!_isInitialized) return;
-    await _notifications.cancel(id);
+    await _notifications.cancel(id: id);
   }
 }

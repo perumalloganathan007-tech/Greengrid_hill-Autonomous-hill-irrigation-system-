@@ -17,6 +17,12 @@ subprojects {
 }
 subprojects {
     project.evaluationDependsOn(":app")
+    // Disable unit test tasks to avoid "different roots" error across drive boundaries (D: vs C:)
+    tasks.whenTaskAdded {
+        if (name.contains("UnitTest")) {
+            enabled = false
+        }
+    }
 }
 
 tasks.register<Delete>("clean") {

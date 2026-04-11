@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
+import '../../l10n/app_localizations.dart';
 import '../../models/water_usage.dart';
 import '../../models/pump_status.dart';
 import '../../services/analytics_service.dart';
@@ -145,7 +146,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Water Usage Analytics'),
+        title: Text(AppLocalizations.of(context)!.waterUsageAnalytics),
         backgroundColor: Colors.blue[700],
         foregroundColor: Colors.white,
       ),
@@ -161,15 +162,15 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                     _buildPeriodSelector(),
                     const SizedBox(height: 20),
                     if (_weeklyData.isEmpty)
-                      const Padding(
-                        padding: EdgeInsets.all(32.0),
+                      Padding(
+                        padding: const EdgeInsets.all(32.0),
                         child: Center(
-                          child: Text('Data is not initialized or no usage data found.'),
+                          child: Text(AppLocalizations.of(context)!.noSensorsFound),
                         ),
                       )
                     else ...[
                       if (_selectedPeriod == 'Day' && _pumps.isNotEmpty) ...[
-                        _buildSectionHeader('Real-time Flow Monitoring'),
+                        _buildSectionHeader(AppLocalizations.of(context)!.realTimeFlowMonitoring),
                         const SizedBox(height: 12),
                         SizedBox(
                           height: 300,
@@ -191,16 +192,16 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                       ],
                       _buildStatisticsCards(),
                       const SizedBox(height: 24),
-                      _buildSectionHeader('Usage Analysis'),
+                      _buildSectionHeader(AppLocalizations.of(context)!.usageAnalysis),
                       const SizedBox(height: 8),
                       _buildMainUsageChart(),
                       const SizedBox(height: 24),
                       if (_selectedPeriod == 'Week' || _selectedPeriod == 'Month') ...[
-                        _buildSectionHeader('Water Conservation'),
+                        _buildSectionHeader(AppLocalizations.of(context)!.waterConservation),
                         const SizedBox(height: 8),
                         _buildSavingsChart(),
                         const SizedBox(height: 24),
-                        _buildSectionHeader('Irrigation Activity'),
+                        _buildSectionHeader(AppLocalizations.of(context)!.irrigationActivity),
                         const SizedBox(height: 8),
                         _buildActivationChart(),
                       ],
@@ -213,12 +214,13 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   }
 
   Widget _buildPeriodSelector() {
+    final l10n = AppLocalizations.of(context)!;
     return SegmentedButton<String>(
-      segments: const [
-        ButtonSegment(value: 'Day', label: Text('Today')),
-        ButtonSegment(value: 'Week', label: Text('Week')),
-        ButtonSegment(value: 'Month', label: Text('Month')),
-        ButtonSegment(value: 'Year', label: Text('Year')),
+      segments: [
+        ButtonSegment(value: 'Day', label: Text(l10n.today)),
+        ButtonSegment(value: 'Week', label: Text(l10n.week)),
+        ButtonSegment(value: 'Month', label: Text(l10n.month)),
+        ButtonSegment(value: 'Year', label: Text(l10n.year)),
       ],
       selected: {_selectedPeriod},
       onSelectionChanged: (Set<String> selected) {
@@ -231,13 +233,14 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   }
 
   Widget _buildStatisticsCards() {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       children: [
         Row(
           children: [
             Expanded(
               child: _buildStatCard(
-                'Water Used',
+                l10n.waterUsed,
                 '${_totalUsed.toStringAsFixed(0)} L',
                 Icons.water_drop,
                 Colors.blue,
@@ -246,7 +249,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
             const SizedBox(width: 12),
             Expanded(
               child: _buildStatCard(
-                'Water Saved',
+                l10n.waterSaved,
                 '${_totalSaved.toStringAsFixed(0)} L',
                 Icons.eco,
                 Colors.green,
@@ -255,7 +258,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
             const SizedBox(width: 12),
             Expanded(
               child: _buildStatCard(
-                'Efficiency',
+                l10n.efficiency,
                 '${_efficiency.toStringAsFixed(1)}%',
                 Icons.trending_up,
                 Colors.orange,
@@ -299,7 +302,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Usage Trend',
+                    AppLocalizations.of(context)!.usageTrend,
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.grey[600],

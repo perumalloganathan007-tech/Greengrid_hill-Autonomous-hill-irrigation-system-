@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../l10n/app_localizations.dart';
+
 
 /// Settings screen for app configuration
 class SettingsScreen extends StatefulWidget {
   final Function(ThemeMode)? onThemeChanged;
+  final Function(Locale)? onLocaleChanged;
   
-  const SettingsScreen({super.key, this.onThemeChanged});
+  const SettingsScreen({super.key, this.onThemeChanged, this.onLocaleChanged});
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -17,6 +20,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _autoModeEnabled = true;
   int _refreshInterval = 5;
   String _selectedTheme = 'system';
+  String _selectedLanguage = 'en';
 
   @override
   void initState() {
@@ -32,6 +36,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _autoModeEnabled = prefs.getBool('auto_mode_default') ?? true;
       _refreshInterval = prefs.getInt('refresh_interval') ?? 5;
       _selectedTheme = prefs.getString('theme_mode') ?? 'system';
+      _selectedLanguage = prefs.getString('app_language') ?? 'en';
     });
   }
 
@@ -42,10 +47,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await prefs.setBool('auto_mode_default', _autoModeEnabled);
     await prefs.setInt('refresh_interval', _refreshInterval);
     await prefs.setString('theme_mode', _selectedTheme);
+    await prefs.setString('app_language', _selectedLanguage);
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Settings saved successfully')),
+        SnackBar(content: Text(AppLocalizations.of(context)!.settingsSaved)),
       );
     }
   }
@@ -58,9 +64,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Settings'),
+        title: Text(l10n.settings),
         backgroundColor: Colors.grey[800],
         foregroundColor: Colors.white,
         actions: [
@@ -73,19 +81,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          _buildSectionHeader('Hardware Connection'),
+          _buildSectionHeader(l10n.hardwareConnection),
           const SizedBox(height: 12),
           _buildTextField(
             controller: _esp32UrlController,
-            label: 'ESP32 IP Address',
+            label: l10n.esp32IpAddress,
             hint: 'http://192.168.1.100',
             icon: Icons.router,
           ),
           const SizedBox(height: 24),
-          _buildSectionHeader('App Preferences'),
+          _buildSectionHeader(l10n.appPreferences),
           const SizedBox(height: 12),
           _buildSwitchTile(
-            title: 'Enable Notifications',
+            title: l10n.enableNotifications,
             subtitle: 'Receive alerts for critical moisture levels',
             value: _notificationsEnabled,
             icon: Icons.notifications,
@@ -94,7 +102,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             },
           ),
           _buildSwitchTile(
-            title: 'Auto Mode by Default',
+            title: l10n.autoModeByDefault,
             subtitle: 'New valves start in automatic mode',
             value: _autoModeEnabled,
             icon: Icons.auto_mode,
@@ -103,7 +111,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             },
           ),
           const SizedBox(height: 24),
-          _buildSectionHeader('Data Refresh'),
+          _buildSectionHeader(l10n.dataRefresh),
           const SizedBox(height: 12),
           Card(
             child: Padding(
@@ -116,7 +124,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       const Icon(Icons.refresh, color: Colors.blue),
                       const SizedBox(width: 12),
                       Text(
-                        'Refresh Interval: $_refreshInterval seconds',
+                        '${l10n.refreshInterval}: $_refreshInterval seconds',
                         style: const TextStyle(fontSize: 16),
                       ),
                     ],
@@ -136,7 +144,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
           const SizedBox(height: 24),
-          _buildSectionHeader('Appearance'),
+          _buildSectionHeader(l10n.appearance),
           const SizedBox(height: 12),
           Card(
             child: Padding(
@@ -144,29 +152,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Row(
+                  Row(
                     children: [
-                      Icon(Icons.palette, color: Colors.purple),
-                      SizedBox(width: 12),
+                      const Icon(Icons.palette, color: Colors.purple),
+                      const SizedBox(width: 12),
                       Text(
-                        'Theme Mode',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        l10n.themeMode,
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),
                   const SizedBox(height: 12),
                   SegmentedButton<String>(
-                    segments: const [
-                      ButtonSegment(value: 'light', label: Text('Light'), icon: Icon(Icons.light_mode)),
-                      ButtonSegment(value: 'dark', label: Text('Dark'), icon: Icon(Icons.dark_mode)),
-                      ButtonSegment(value: 'system', label: Text('System'), icon: Icon(Icons.settings_brightness)),
+                    segments: [
+                      ButtonSegment(value: 'light', label: Text(l10n.light), icon: const Icon(Icons.light_mode)),
+                      ButtonSegment(value: 'dark', label: Text(l10n.dark), icon: const Icon(Icons.dark_mode)),
+                      ButtonSegment(value: 'system', label: Text(l10n.system), icon: const Icon(Icons.settings_brightness)),
                     ],
                     selected: {_selectedTheme},
                     onSelectionChanged: (Set<String> selected) {
                       setState(() {
                         _selectedTheme = selected.first;
                       });
-                      // Apply theme immediately
                       final themeMode = _selectedTheme == 'light'
                           ? ThemeMode.light
                           : _selectedTheme == 'dark'
@@ -176,12 +183,45 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       _saveSettings();
                     },
                   ),
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      const Icon(Icons.language, color: Colors.blue),
+                      const SizedBox(width: 12),
+                      Text(
+                        l10n.language,
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: SegmentedButton<String>(
+                      segments: const [
+                        ButtonSegment(value: 'en', label: Text('EN')),
+                        ButtonSegment(value: 'hi', label: Text('HI')),
+                        ButtonSegment(value: 'ta', label: Text('TA')),
+                        ButtonSegment(value: 'te', label: Text('TE')),
+                        ButtonSegment(value: 'ml', label: Text('ML')),
+                      ],
+                      selected: {_selectedLanguage},
+                      onSelectionChanged: (Set<String> selected) {
+                        final langCode = selected.first;
+                        setState(() {
+                          _selectedLanguage = langCode;
+                        });
+                        widget.onLocaleChanged?.call(Locale(langCode));
+                        _saveSettings();
+                      },
+                    ),
+                  ),
                 ],
               ),
             ),
           ),
           const SizedBox(height: 24),
-          _buildSectionHeader('About'),
+          _buildSectionHeader(l10n.about),
           const SizedBox(height: 12),
           const Card(
             child: ListTile(
@@ -194,7 +234,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           Card(
             child: ListTile(
               leading: const Icon(Icons.bug_report, color: Colors.orange),
-              title: const Text('Test Connection'),
+              title: Text(l10n.testConnection),
               subtitle: const Text('Verify ESP32 connectivity'),
               trailing: const Icon(Icons.arrow_forward_ios, size: 16),
               onTap: _testConnection,

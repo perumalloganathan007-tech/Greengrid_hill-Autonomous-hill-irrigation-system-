@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
+import 'package:intl/intl.dart';
 import '../../models/sensor_data.dart';
-import '../../models/tank_level.dart';
 import '../../models/pump_status.dart';
 import '../../models/plant_profile.dart';
 import '../../models/terrace_data.dart';
@@ -10,9 +11,9 @@ import '../../services/notification_service.dart';
 import '../../services/smart_irrigation_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../services/preferences_service.dart';
+import '../../utils/constants.dart';
 import '../widgets/network_status_indicator.dart';
 import '../widgets/moisture_gauge_widget.dart';
-import '../widgets/tank_level_widget.dart';
 import '../widgets/water_flow_gauge_widget.dart';
 
 /// Main dashboard screen displaying real-time telemetry and controls
@@ -36,7 +37,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   final NotificationService _notificationService = NotificationService();
 
   List<SensorData> _sensors = [];
-  List<TankLevel> _tanks = [];
   final List<PumpStatus> _pumps = [];
   bool _isLoading = true;
   DateTime? _lastUpdateTime;
@@ -54,7 +54,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void initState() {
     super.initState();
     _controlService = ControlService(esp32BaseUrl: 'http://192.168.1.100'); // Default
-    _smartIrrigationService = SmartIrrigationService(_controlService);
+    _smartIrrigationService = SmartIrrigationService(_controlService, _notificationService);
     _initializeData();
     _notificationService.initialize();
   }
@@ -66,27 +66,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     final esp32Url = await _prefsService.getEsp32Url();
     _controlService = ControlService(esp32BaseUrl: esp32Url);
-    _smartIrrigationService = SmartIrrigationService(_controlService);
+    _smartIrrigationService = SmartIrrigationService(_controlService, _notificationService);
 
-    // Initial pre-population of pumps to avoid race conditions with telemetry
+    // Initial pump setup will now wait for telemetry to define the sensor count
     setState(() {
       _pumps.clear();
-      for (int i = 0; i < 4; i++) {
-        _pumps.add(PumpStatus(
-          pumpId: 'pump_${i + 1}',
-          isActive: false,
-          flowRate: 0.0,
-          pressure: 0.0,
-          lastToggled: DateTime.now(),
-          controlMode: 'Auto',
-          zone: 'Terrace Zone ${i + 1}',
-        ));
-      }
     });
 
     // Start real-time monitoring
     _telemetryService.startSensorMonitoring();
-    _telemetryService.startTankMonitoring();
 
     // Listen to sensor stream
     _telemetryService.sensorDataStream.listen((sensors) {
@@ -95,24 +83,43 @@ class _DashboardScreenState extends State<DashboardScreen> {
           _sensors = sensors;
           _isLoading = false;
           _lastUpdateTime = DateTime.now();
+          
+          // Dynamically synchronize the number of pumps with the number of sensors
+          // This ensures that "three soil moisture widget = three terrace in valve control"
+          final List<PumpStatus> syncedPumps = [];
+          for (int i = 0; i < sensors.length; i++) {
+            final pumpId = 'pump_${i + 1}';
+            final sensor = sensors[i];
+            
+            // Attempt to preserve existing pump status if already known
+            final existingIndex = _pumps.indexWhere((p) => p.pumpId == pumpId);
+            if (existingIndex != -1) {
+              syncedPumps.add(_pumps[existingIndex].copyWith(zone: sensor.location));
+            } else {
+              syncedPumps.add(PumpStatus(
+                pumpId: pumpId,
+                isActive: false,
+                flowRate: 0.0,
+                pressure: 0.0,
+                lastToggled: DateTime.now(),
+                controlMode: 'Auto',
+                zone: sensor.location,
+              ));
+            }
+          }
+          
+          _pumps.clear();
+          _pumps.addAll(syncedPumps);
         });
+
+        // Fetch actual status for the newly synced pumps
+        _loadPumpData();
+
         // Check for alerts
         _notificationService.checkSensorAlerts(sensors);
         
         // Auto-pump logic using SmartIrrigationService
         _checkAutoIrrigation();
-      }
-    });
-
-    // Listen to tank stream
-    _telemetryService.tankLevelStream.listen((tanks) {
-      if (mounted) {
-        setState(() {
-          _tanks = tanks;
-          _lastUpdateTime = DateTime.now();
-        });
-        // Check for tank alerts
-        _notificationService.checkTankAlerts(tanks);
       }
     });
 
@@ -164,29 +171,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _loadPumpData() async {
+    if (_pumps.isEmpty) return;
+
     try {
       final List<Future<PumpStatus?>> futures = [];
-      for (int i = 0; i < 4; i++) {
-        futures.add(_controlService.getPumpStatus('pump_${i + 1}'));
+      for (int i = 0; i < _pumps.length; i++) {
+        futures.add(_controlService.getPumpStatus(_pumps[i].pumpId));
       }
 
       final results = await Future.wait(futures);
       final List<PumpStatus> updatedPumps = [];
       
-      for (int i = 0; i < 4; i++) {
-        final pumpId = 'pump_${i + 1}';
-        final zoneName = 'Terrace Zone ${i + 1}';
+      for (int i = 0; i < _pumps.length; i++) {
+        final pump = _pumps[i];
         final status = results[i];
         
         updatedPumps.add(status ?? 
           PumpStatus(
-            pumpId: pumpId,
-            isActive: false,
-            flowRate: 0.0,
-            pressure: 0.0,
-            lastToggled: DateTime.now(),
-            controlMode: 'Auto',
-            zone: zoneName,
+            pumpId: pump.pumpId,
+            isActive: pump.isActive,
+            flowRate: pump.flowRate,
+            pressure: pump.pressure,
+            lastToggled: pump.lastToggled,
+            controlMode: pump.controlMode,
+            zone: pump.zone,
           )
         );
       }
@@ -196,10 +204,40 @@ class _DashboardScreenState extends State<DashboardScreen> {
           _pumps.clear();
           _pumps.addAll(updatedPumps);
         });
-        _checkAutoIrrigation();
       }
     } catch (e) {
       debugPrint('Error loading pump data: $e');
+    }
+  }
+
+  Future<void> _setPumpMode(int index, String mode) async {
+    final pump = _pumps[index];
+    final l10n = AppLocalizations.of(context)!;
+    setState(() {
+      // When switching to Manual, ensure the valve starts in the OFF state for safety
+      final bool newIsActive = (mode == 'Manual') ? false : pump.isActive;
+      _pumps[index] = pump.copyWith(controlMode: mode, isActive: newIsActive);
+    });
+
+    try {
+      if (mode == 'Auto') {
+        await _controlService.setAutoMode(pump.pumpId);
+      } else {
+        await _controlService.setManualMode(pump.pumpId);
+      }
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.setMode(pump.zone, mode)),
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 1),
+            backgroundColor: const Color(0xFF2E7D32),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Error setting pump mode: $e');
     }
   }
 
@@ -219,7 +257,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Valve ${turnOn ? "activated" : "deactivated"}'),
+          content: Text(turnOn ? AppLocalizations.of(context)!.valveActivated : AppLocalizations.of(context)!.valveDeactivated),
           backgroundColor: const Color(0xFF1B5E20),
         ),
       );
@@ -239,8 +277,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFF121212), // Material Dark BG
       appBar: AppBar(
-        title: const Text('GreenGrid Dashboard', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: const Color(0xFF2E7D32), // Emerald Green
+        title: Text(AppLocalizations.of(context)!.dashboard, style: const TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: const Color(0xFF388E3C), // Emerald Green
         foregroundColor: Colors.white,
         elevation: 4,
         actions: [
@@ -251,12 +289,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                   const Text(
-                    'LAST SYNC',
-                    style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Colors.white54),
+                   Text(
+                    AppLocalizations.of(context)!.lastSync.toUpperCase(),
+                    style: const TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Colors.white54),
                   ),
                   Text(
-                    '${_lastUpdateTime!.hour.toString().padLeft(2, '0')}:${_lastUpdateTime!.minute.toString().padLeft(2, '0')}:${_lastUpdateTime!.second.toString().padLeft(2, '0')}',
+                    DateFormat('HH:mm:ss').format(_lastUpdateTime!),
                     style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
                   ),
                 ],
@@ -277,17 +315,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
               builder: (context, constraints) {
                 final double width = constraints.maxWidth;
                 int crossAxisCount = 2;
-                double aspectRatio = 0.85;
+                double aspectRatio = 1.1;
 
                 if (width < 350) {
                   crossAxisCount = 1;
-                  aspectRatio = 1.4;
+                  aspectRatio = 1.8;
                 } else if (width > 900) {
                   crossAxisCount = 3;
-                  aspectRatio = 0.9;
+                  aspectRatio = 1.2;
                 } else if (width > 1400) {
                   crossAxisCount = 4;
-                  aspectRatio = 1.0;
+                  aspectRatio = 1.4;
                 }
 
                 return RefreshIndicator(
@@ -301,15 +339,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildSectionHeader('Soil Moisture Sensors'),
+                        _buildSectionHeader(AppLocalizations.of(context)!.soilMoistureSensors),
                         const SizedBox(height: 16),
                         _buildMoistureGrid(crossAxisCount, aspectRatio),
                         const SizedBox(height: 32),
-                        _buildSectionHeader('Water Tank Levels'),
-                        const SizedBox(height: 16),
-                        _buildTankLevels(),
-                        const SizedBox(height: 32),
-                        _buildSectionHeader('Valve Controls'),
+                        _buildSectionHeader(AppLocalizations.of(context)!.valveControls),
                         const SizedBox(height: 16),
                         _buildValveControls(),
                         const SizedBox(height: 32),
@@ -335,10 +369,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildMoistureGrid(int crossAxisCount, double aspectRatio) {
     if (_sensors.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
-          padding: EdgeInsets.all(24.0),
-          child: Text('Data is not initialized or no sensors found.', style: TextStyle(color: Colors.white54)),
+          padding: const EdgeInsets.all(24.0),
+          child: Text(AppLocalizations.of(context)!.noSensorsFound, style: const TextStyle(color: Colors.white54)),
         ),
       );
     }
@@ -355,11 +389,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
       itemCount: _sensors.length,
       itemBuilder: (context, index) {
         final sensor = _sensors[index];
-        String status = 'Safe';
-        if (sensor.moistureLevel < 20) {
-          status = 'Critical';
-        } else if (sensor.moistureLevel < 40) {
-          status = 'Warning';
+        String status = AppLocalizations.of(context)!.statusSafe;
+        if (sensor.moistureLevel < AppConstants.criticalMoistureLevel) {
+          status = AppLocalizations.of(context)!.statusCritical;
+        } else if (sensor.moistureLevel < AppConstants.warningMoistureLevel) {
+          status = AppLocalizations.of(context)!.statusWarning;
         }
 
         return MoistureGaugeWidget(
@@ -372,53 +406,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildTankLevels() {
-    if (_tanks.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(24.0),
-          child: Text('Data is not initialized or no tanks found.', style: TextStyle(color: Colors.white54)),
-        ),
-      );
-    }
-
-    return Column(
-      children: _tanks.map((tank) {
-        String status = 'Normal';
-        if (tank.levelPercentage < 15) {
-          status = 'Critical';
-        } else if (tank.levelPercentage < 30) {
-          status = 'Low';
-        } else if (tank.levelPercentage > 90) {
-          status = 'Full';
-        }
-
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 12.0),
-          child: TankLevelWidget(
-            tankId: tank.tankId,
-            levelPercentage: tank.levelPercentage,
-            volumeLiters: tank.volumeLiters,
-            capacityLiters: tank.capacityLiters,
-            status: status,
-          ),
-        );
-      }).toList(),
-    );
-  }
-
   Widget _buildValveControls() {
     if (_pumps.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
-          padding: EdgeInsets.all(24.0),
-          child: Text('No valves available.', style: TextStyle(color: Colors.white54)),
+          padding: const EdgeInsets.all(24.0),
+          child: Text(AppLocalizations.of(context)!.noValvesAvailable, style: const TextStyle(color: Colors.white54)),
         ),
       );
     }
 
     return Column(
-      children: List.generate(_pumps.length, (index) {
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Valve Cards
+        ...List.generate(_pumps.length, (index) {
         final pump = _pumps[index];
         return Card(
           color: const Color(0xFF1E1E1E),
@@ -435,15 +437,68 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   pump.zone,
                   style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                 ),
-                subtitle: Text(
-                  'Mode: ${pump.controlMode}',
-                  style: const TextStyle(color: Colors.white54),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          AppLocalizations.of(context)!.autoMode,
+                          style: TextStyle(
+                            color: pump.controlMode == 'Auto' ? Colors.green.shade300 : Colors.white38,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        SizedBox(
+                          height: 30,
+                          child: Transform.scale(
+                            scale: 0.7,
+                            child: Switch(
+                              value: pump.controlMode == 'Auto',
+                              onChanged: (isAuto) => _setPumpMode(index, isAuto ? 'Auto' : 'Manual'),
+                              activeTrackColor: Colors.green.withValues(alpha: 0.3),
+                              activeThumbColor: Colors.green,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    Text(
+                      pump.controlMode == 'Auto' 
+                          ? AppLocalizations.of(context)!.statusAutomatic 
+                          : (pump.isActive ? AppLocalizations.of(context)!.statusManualOn : AppLocalizations.of(context)!.statusSystemOff),
+                      style: TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
+                        color: pump.controlMode == 'Auto' 
+                            ? Colors.green.shade400 
+                            : (pump.isActive ? Colors.orange.shade400 : Colors.red.shade400),
+                      ),
+                    ),
+                  ],
                 ),
-                trailing: Switch(
-                  value: pump.isActive,
-                  onChanged: (val) => _handlePumpToggle(index, val),
-                  activeTrackColor: Colors.green.withValues(alpha: 0.3),
-                  activeThumbColor: Colors.green,
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      AppLocalizations.of(context)!.manualMode,
+                      style: TextStyle(
+                        color: pump.controlMode == 'Manual' ? Colors.orange.shade300 : Colors.white24,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Switch(
+                      value: pump.isActive,
+                      onChanged: pump.controlMode == 'Manual' 
+                        ? (val) => _handlePumpToggle(index, val)
+                        : null, // Disable switches if in Auto mode
+                      activeTrackColor: Colors.green.withValues(alpha: 0.3),
+                      activeThumbColor: Colors.green,
+                    ),
+                  ],
                 ),
               ),
               if (pump.isActive)
@@ -458,7 +513,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ],
           ),
         );
-      }),
+        }),
+      ],
     );
   }
 }

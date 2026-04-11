@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import '../utils/constants.dart';
 
 /// Model representing soil moisture sensor data
 class SensorData extends Equatable {
@@ -26,9 +27,9 @@ class SensorData extends Equatable {
     double? temperature,
   }) {
     String status;
-    if (moistureLevel < 20) {
+    if (moistureLevel < AppConstants.criticalMoistureLevel) {
       status = 'Critical';
-    } else if (moistureLevel < 40) {
+    } else if (moistureLevel < AppConstants.warningMoistureLevel) {
       status = 'Warning';
     } else {
       status = 'Safe';

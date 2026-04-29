@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../viewmodels/auth_bloc.dart';
 import '../../viewmodels/auth_event.dart';
 import '../widgets/creative_logout_dialog.dart';
+import 'my_tickets_screen.dart';
 
 /// Profile screen for user account management
 class ProfileScreen extends StatefulWidget {
@@ -182,6 +183,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         const SnackBar(content: Text('User ID copied to clipboard')),
                       );
                     },
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  Card(
+                    child: ListTile(
+                      leading: const Icon(Icons.support_agent, color: Colors.blue),
+                      title: const Text('My Support Tickets', style: TextStyle(fontWeight: FontWeight.bold)),
+                      subtitle: const Text('View and create feedback or bug reports'),
+                      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const MyTicketsScreen()),
+                        );
+                      },
+                    ),
                   ),
 
                   const SizedBox(height: 32),

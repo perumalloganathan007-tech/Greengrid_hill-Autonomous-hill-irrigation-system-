@@ -7,6 +7,7 @@ import '../../viewmodels/auth_event.dart';
 import '../widgets/creative_logout_dialog.dart';
 import '../widgets/network_status_indicator.dart';
 import 'admin_activity_monitor_screen.dart';
+import 'admin_tickets_screen.dart';
 
 /// Screen for admins to view and manage registered users
 class AdminUsersScreen extends StatefulWidget {
@@ -58,24 +59,38 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('DASHBOARD'),
-        actions: [
-          const NetworkStatusIndicator(),
-          const SizedBox(width: 8),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: _showLogoutDialog,
-            tooltip: 'Logout',
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('ADMIN DASHBOARD'),
+          bottom: const TabBar(
+            tabs: [
+              Tab(icon: Icon(Icons.people), text: 'Users'),
+              Tab(icon: Icon(Icons.support_agent), text: 'Tickets'),
+            ],
+            indicatorColor: Color(0xFF00E5FF),
+            labelColor: Color(0xFF00E5FF),
+            unselectedLabelColor: Colors.white70,
           ),
-          const SizedBox(width: 8),
-        ],
-      ),
-      body: Column(
-        children: [
-          _buildSearchBar(),
-          Expanded(
+          actions: [
+            const NetworkStatusIndicator(),
+            const SizedBox(width: 8),
+            IconButton(
+              icon: const Icon(Icons.logout),
+              onPressed: _showLogoutDialog,
+              tooltip: 'Logout',
+            ),
+            const SizedBox(width: 8),
+          ],
+        ),
+        body: TabBarView(
+          children: [
+            // Tab 1: Users
+            Column(
+              children: [
+                _buildSearchBar(),
+                Expanded(
             child: StreamBuilder<List<UserModel>>(
               stream: _userService.getUsersStream(),
               builder: (context, snapshot) {
@@ -131,6 +146,11 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
             ),
           ),
         ],
+      ),
+      // Tab 2: Tickets
+      const AdminTicketsScreen(),
+      ],
+      ),
       ),
     );
   }

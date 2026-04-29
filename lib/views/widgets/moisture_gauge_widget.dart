@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:syncfusion_flutter_gauges/gauges.dart';
 import '../../utils/constants.dart';
+import '../../l10n/app_localizations.dart';
 
 /// Widget to display soil moisture level with radial gauge
 class MoistureGaugeWidget extends StatelessWidget {
@@ -66,7 +67,7 @@ class MoistureGaugeWidget extends StatelessWidget {
         child: Column(
           children: [
             Text(
-              location.toUpperCase(),
+              location.replaceAll('Terrace Zone', AppLocalizations.of(context)!.terraceZone).toUpperCase(),
               style: TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.w900,

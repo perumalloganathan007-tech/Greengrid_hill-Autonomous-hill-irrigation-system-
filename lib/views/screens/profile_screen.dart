@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../viewmodels/auth_bloc.dart';
 import '../../viewmodels/auth_event.dart';
+import '../../viewmodels/auth_state.dart';
+import '../../l10n/app_localizations.dart';
 import '../widgets/creative_logout_dialog.dart';
 import 'my_tickets_screen.dart';
 
@@ -46,23 +48,81 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  void _showEditNameDialog(BuildContext context, String currentName) {
+    final l10n = AppLocalizations.of(context)!;
+    final controller = TextEditingController(text: currentName);
+    final formKey = GlobalKey<FormState>();
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.editName),
+        content: Form(
+          key: formKey,
+          child: TextFormField(
+            controller: controller,
+            decoration: InputDecoration(
+              labelText: l10n.enterNewName,
+              border: const OutlineInputBorder(),
+            ),
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return l10n.nameCannotBeEmpty;
+              }
+              return null;
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(l10n.cancel),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (formKey.currentState!.validate()) {
+                final newName = controller.text.trim();
+                Navigator.pop(dialogContext);
+                context.read<AuthBloc>().add(UpdateDisplayNameRequested(displayName: newName));
+              }
+            },
+            child: Text(l10n.save),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final user = FirebaseAuth.instance.currentUser;
-    final displayName = user?.displayName ?? 'Not Provided';
-    final email = user?.email ?? 'Not Available';
-    final role = 'User';
-    final userId = user?.uid ?? 'Unknown ID';
+    final displayName = user?.displayName ?? l10n.notProvided;
+    final email = user?.email ?? l10n.notAvailable;
+    final role = l10n.roleUser;
+    final userId = user?.uid ?? l10n.unknownId;
     final createdAt = user?.metadata.creationTime ?? DateTime.now();
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Profile'),
+        title: Text(l10n.profile),
         backgroundColor: Colors.green[700],
         foregroundColor: Colors.white,
       ),
-      body: SingleChildScrollView(
-        child: Column(
+      body: BlocListener<AuthBloc, AuthState>(
+        listener: (context, state) {
+          if (state is ProfileUpdated) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(AppLocalizations.of(context)!.nameUpdatedSuccessfully),
+                backgroundColor: Colors.green,
+              ),
+            );
+            setState(() {}); // Redraw the UI with new user details
+          }
+        },
+        child: SingleChildScrollView(
+          child: Column(
           children: [
             // Profile Header
             Container(
@@ -92,13 +152,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const SizedBox(height: 16),
                   // Display Name
-                  Text(
-                    displayName,
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        displayName,
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.edit, color: Colors.white70, size: 20),
+                        onPressed: () => _showEditNameDialog(context, displayName),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 8),
                   // Email
@@ -141,9 +210,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Account Information',
-                    style: TextStyle(
+                  Text(
+                    l10n.accountInformation,
+                    style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
@@ -153,34 +222,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   _buildInfoCard(
                     context: context,
                     icon: Icons.email_outlined,
-                    title: 'Email',
+                    title: l10n.email,
                     value: email,
                   ),
                   
                   _buildInfoCard(
                     context: context,
                     icon: Icons.admin_panel_settings_outlined,
-                    title: 'Role',
+                    title: l10n.role,
                     value: role.toUpperCase(),
                   ),
                   
                   _buildInfoCard(
                     context: context,
                     icon: Icons.calendar_today_outlined,
-                    title: 'Member Since',
-                    value: _formatDate(createdAt),
+                    title: l10n.memberSince,
+                    value: MaterialLocalizations.of(context).formatMediumDate(createdAt),
                   ),
                   
                   _buildInfoCard(
                     context: context,
                     icon: Icons.badge_outlined,
-                    title: 'User ID',
+                    title: l10n.userId,
                     value: userId,
                     trailing: const Icon(Icons.copy, size: 20, color: Colors.grey),
                     onTap: () {
                       Clipboard.setData(ClipboardData(text: userId));
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('User ID copied to clipboard')),
+                        SnackBar(content: Text(l10n.userIdCopied)),
                       );
                     },
                   ),
@@ -190,8 +259,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Card(
                     child: ListTile(
                       leading: const Icon(Icons.support_agent, color: Colors.blue),
-                      title: const Text('My Support Tickets', style: TextStyle(fontWeight: FontWeight.bold)),
-                      subtitle: const Text('View and create feedback or bug reports'),
+                      title: Text(l10n.mySupportTickets, style: const TextStyle(fontWeight: FontWeight.bold)),
+                      subtitle: Text(l10n.mySupportTicketsDesc),
                       trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                       onTap: () {
                         Navigator.push(
@@ -210,9 +279,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     child: ElevatedButton.icon(
                       onPressed: _showLogoutDialog,
                       icon: const Icon(Icons.logout),
-                      label: const Text(
-                        'LOGOUT',
-                        style: TextStyle(
+                      label: Text(
+                        l10n.logout.toUpperCase(),
+                        style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                           letterSpacing: 1.2,
@@ -235,6 +304,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ],
         ),
+      ),
       ),
     );
   }
@@ -270,13 +340,5 @@ class _ProfileScreenState extends State<ProfileScreen> {
         trailing: trailing,
       ),
     );
-  }
-
-  String _formatDate(DateTime date) {
-    final months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-    ];
-    return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
 }

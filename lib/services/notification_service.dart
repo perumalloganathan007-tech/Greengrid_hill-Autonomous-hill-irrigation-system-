@@ -1,5 +1,6 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../models/sensor_data.dart';
+import '../models/environment_data.dart';
 
 /// Service for managing push notifications and alerts
 class NotificationService {
@@ -89,6 +90,27 @@ class NotificationService {
           priority: Priority.high,
         );
       }
+    }
+  }
+
+  /// Check ambient environment data and send alerts if extreme temperatures detected
+  Future<void> checkEnvironmentAlerts(EnvironmentData data) async {
+    if (!_isInitialized) return;
+
+    if (data.temperature > 35.0) {
+      await _showNotification(
+        id: 'heat_stress'.hashCode,
+        title: '🌡️ Heat Stress Warning',
+        body: 'Ambient temperature is ${data.temperature.toStringAsFixed(1)}°C. Monitor plants for heat stress.',
+        priority: Priority.high,
+      );
+    } else if (data.temperature < 5.0) {
+      await _showNotification(
+        id: 'frost_warning'.hashCode,
+        title: '❄️ Frost Warning',
+        body: 'Ambient temperature dropped to ${data.temperature.toStringAsFixed(1)}°C. Frost risk detected!',
+        priority: Priority.max,
+      );
     }
   }
 

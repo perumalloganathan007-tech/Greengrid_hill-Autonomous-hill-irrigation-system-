@@ -475,6 +475,702 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{zone} set to {mode} mode'**
   String setMode(String zone, String mode);
+
+  /// No description provided for @systemEnvironment.
+  ///
+  /// In en, this message translates to:
+  /// **'System Environment'**
+  String get systemEnvironment;
+
+  /// No description provided for @temperature.
+  ///
+  /// In en, this message translates to:
+  /// **'Temperature'**
+  String get temperature;
+
+  /// No description provided for @humidity.
+  ///
+  /// In en, this message translates to:
+  /// **'Humidity'**
+  String get humidity;
+
+  /// No description provided for @climateAnalysis.
+  ///
+  /// In en, this message translates to:
+  /// **'Climate Analysis'**
+  String get climateAnalysis;
+
+  /// No description provided for @enableNotificationsDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Receive alerts for critical moisture levels'**
+  String get enableNotificationsDesc;
+
+  /// No description provided for @autoModeByDefaultDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'New valves start in automatic mode'**
+  String get autoModeByDefaultDesc;
+
+  /// No description provided for @seconds.
+  ///
+  /// In en, this message translates to:
+  /// **'seconds'**
+  String get seconds;
+
+  /// No description provided for @sec.
+  ///
+  /// In en, this message translates to:
+  /// **'sec'**
+  String get sec;
+
+  /// No description provided for @appDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Autonomous Hillside Irrigation System'**
+  String get appDescription;
+
+  /// No description provided for @testConnectionDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify ESP32 connectivity'**
+  String get testConnectionDesc;
+
+  /// No description provided for @testingConnection.
+  ///
+  /// In en, this message translates to:
+  /// **'Testing connection...'**
+  String get testingConnection;
+
+  /// No description provided for @connectionTest.
+  ///
+  /// In en, this message translates to:
+  /// **'Connection Test'**
+  String get connectionTest;
+
+  /// No description provided for @connectionSuccessful.
+  ///
+  /// In en, this message translates to:
+  /// **'ESP32 connection successful!\nLatency: 45ms'**
+  String get connectionSuccessful;
+
+  /// No description provided for @notProvided.
+  ///
+  /// In en, this message translates to:
+  /// **'Not Provided'**
+  String get notProvided;
+
+  /// No description provided for @notAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Not Available'**
+  String get notAvailable;
+
+  /// No description provided for @roleUser.
+  ///
+  /// In en, this message translates to:
+  /// **'User'**
+  String get roleUser;
+
+  /// No description provided for @unknownId.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown ID'**
+  String get unknownId;
+
+  /// No description provided for @accountInformation.
+  ///
+  /// In en, this message translates to:
+  /// **'Account Information'**
+  String get accountInformation;
+
+  /// No description provided for @role.
+  ///
+  /// In en, this message translates to:
+  /// **'Role'**
+  String get role;
+
+  /// No description provided for @memberSince.
+  ///
+  /// In en, this message translates to:
+  /// **'Member Since'**
+  String get memberSince;
+
+  /// No description provided for @userId.
+  ///
+  /// In en, this message translates to:
+  /// **'User ID'**
+  String get userId;
+
+  /// No description provided for @userIdCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'User ID copied to clipboard'**
+  String get userIdCopied;
+
+  /// No description provided for @mySupportTickets.
+  ///
+  /// In en, this message translates to:
+  /// **'My Support Tickets'**
+  String get mySupportTickets;
+
+  /// No description provided for @mySupportTicketsDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'View and create feedback or bug reports'**
+  String get mySupportTicketsDesc;
+
+  /// No description provided for @logout.
+  ///
+  /// In en, this message translates to:
+  /// **'Logout'**
+  String get logout;
+
+  /// No description provided for @terraceZone.
+  ///
+  /// In en, this message translates to:
+  /// **'Terrace Zone'**
+  String get terraceZone;
+
+  /// No description provided for @waterFlowRate.
+  ///
+  /// In en, this message translates to:
+  /// **'Water Flow Rate'**
+  String get waterFlowRate;
+
+  /// No description provided for @pump.
+  ///
+  /// In en, this message translates to:
+  /// **'Pump'**
+  String get pump;
+
+  /// No description provided for @litersPerMinute.
+  ///
+  /// In en, this message translates to:
+  /// **'L/min'**
+  String get litersPerMinute;
+
+  /// No description provided for @statusFlowing.
+  ///
+  /// In en, this message translates to:
+  /// **'Flowing'**
+  String get statusFlowing;
+
+  /// No description provided for @statusPumpOnNoFlow.
+  ///
+  /// In en, this message translates to:
+  /// **'Pump On / No Flow'**
+  String get statusPumpOnNoFlow;
+
+  /// No description provided for @statusStandby.
+  ///
+  /// In en, this message translates to:
+  /// **'Standby'**
+  String get statusStandby;
+
+  /// No description provided for @editName.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Name'**
+  String get editName;
+
+  /// No description provided for @enterNewName.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter new name'**
+  String get enterNewName;
+
+  /// No description provided for @cancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get cancel;
+
+  /// No description provided for @nameUpdatedSuccessfully.
+  ///
+  /// In en, this message translates to:
+  /// **'Name updated successfully'**
+  String get nameUpdatedSuccessfully;
+
+  /// No description provided for @nameCannotBeEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Name cannot be empty'**
+  String get nameCannotBeEmpty;
+
+  /// No description provided for @createAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Account'**
+  String get createAccount;
+
+  /// No description provided for @accountCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Account created successfully!'**
+  String get accountCreated;
+
+  /// No description provided for @joinGreenGrid.
+  ///
+  /// In en, this message translates to:
+  /// **'Join GreenGrid Hill'**
+  String get joinGreenGrid;
+
+  /// No description provided for @createAccountDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Create your account to get started'**
+  String get createAccountDesc;
+
+  /// No description provided for @displayName.
+  ///
+  /// In en, this message translates to:
+  /// **'Display Name'**
+  String get displayName;
+
+  /// No description provided for @enterDisplayName.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your name'**
+  String get enterDisplayName;
+
+  /// No description provided for @confirmPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm Password'**
+  String get confirmPassword;
+
+  /// No description provided for @reEnterPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Re-enter your password'**
+  String get reEnterPassword;
+
+  /// No description provided for @alreadyHaveAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Already have an account?'**
+  String get alreadyHaveAccount;
+
+  /// No description provided for @resetPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset Password'**
+  String get resetPassword;
+
+  /// No description provided for @passwordResetSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Password reset email sent! Check your inbox.'**
+  String get passwordResetSent;
+
+  /// No description provided for @enterEmailToReset.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your email to receive reset instructions'**
+  String get enterEmailToReset;
+
+  /// No description provided for @enterRegisteredEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your registered email'**
+  String get enterRegisteredEmail;
+
+  /// No description provided for @sendResetLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Send Reset Link'**
+  String get sendResetLink;
+
+  /// No description provided for @rememberPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Remember your password?'**
+  String get rememberPassword;
+
+  /// No description provided for @appTagline.
+  ///
+  /// In en, this message translates to:
+  /// **'Autonomous Hillside Irrigation'**
+  String get appTagline;
+
+  /// No description provided for @enterEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your email'**
+  String get enterEmail;
+
+  /// No description provided for @enterPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your password'**
+  String get enterPassword;
+
+  /// No description provided for @increasing.
+  ///
+  /// In en, this message translates to:
+  /// **'Increasing +{value} L/day'**
+  String increasing(String value);
+
+  /// No description provided for @decreasing.
+  ///
+  /// In en, this message translates to:
+  /// **'Decreasing {value} L/day'**
+  String decreasing(String value);
+
+  /// No description provided for @stable.
+  ///
+  /// In en, this message translates to:
+  /// **'Stable'**
+  String get stable;
+
+  /// No description provided for @avg.
+  ///
+  /// In en, this message translates to:
+  /// **'Avg'**
+  String get avg;
+
+  /// No description provided for @range.
+  ///
+  /// In en, this message translates to:
+  /// **'Range'**
+  String get range;
+
+  /// No description provided for @liters.
+  ///
+  /// In en, this message translates to:
+  /// **'Liters'**
+  String get liters;
+
+  /// No description provided for @hourOfDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Hour of Day (24h)'**
+  String get hourOfDay;
+
+  /// No description provided for @saved.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved'**
+  String get saved;
+
+  /// No description provided for @flowLevel.
+  ///
+  /// In en, this message translates to:
+  /// **'Flow Level'**
+  String get flowLevel;
+
+  /// No description provided for @monthlyTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly Total'**
+  String get monthlyTotal;
+
+  /// No description provided for @dailyUsage.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily Usage'**
+  String get dailyUsage;
+
+  /// No description provided for @activations.
+  ///
+  /// In en, this message translates to:
+  /// **'Activations'**
+  String get activations;
+
+  /// No description provided for @waitingForSensor.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for sensor...'**
+  String get waitingForSensor;
+
+  /// No description provided for @confirmLogout.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm Logout'**
+  String get confirmLogout;
+
+  /// No description provided for @logoutConfirmationDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'The GreenGrid works best with your care. Are you sure you want to leave the system?'**
+  String get logoutConfirmationDesc;
+
+  /// No description provided for @newTicket.
+  ///
+  /// In en, this message translates to:
+  /// **'New Ticket'**
+  String get newTicket;
+
+  /// No description provided for @submitFeedback.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit Feedback / Ticket'**
+  String get submitFeedback;
+
+  /// No description provided for @howCanWeHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'How can we help?'**
+  String get howCanWeHelp;
+
+  /// No description provided for @issueType.
+  ///
+  /// In en, this message translates to:
+  /// **'Issue Type'**
+  String get issueType;
+
+  /// No description provided for @description.
+  ///
+  /// In en, this message translates to:
+  /// **'Description'**
+  String get description;
+
+  /// No description provided for @submitTicket.
+  ///
+  /// In en, this message translates to:
+  /// **'SUBMIT TICKET'**
+  String get submitTicket;
+
+  /// No description provided for @ticketSubmitted.
+  ///
+  /// In en, this message translates to:
+  /// **'Support ticket submitted successfully!'**
+  String get ticketSubmitted;
+
+  /// No description provided for @enterDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a description'**
+  String get enterDescription;
+
+  /// No description provided for @descriptionTooShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Description is too short'**
+  String get descriptionTooShort;
+
+  /// No description provided for @bug.
+  ///
+  /// In en, this message translates to:
+  /// **'Bug'**
+  String get bug;
+
+  /// No description provided for @suggestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Suggestion'**
+  String get suggestion;
+
+  /// No description provided for @other.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get other;
+
+  /// No description provided for @open.
+  ///
+  /// In en, this message translates to:
+  /// **'Open'**
+  String get open;
+
+  /// No description provided for @processing.
+  ///
+  /// In en, this message translates to:
+  /// **'Processing'**
+  String get processing;
+
+  /// No description provided for @resolved.
+  ///
+  /// In en, this message translates to:
+  /// **'Resolved'**
+  String get resolved;
+
+  /// No description provided for @closed.
+  ///
+  /// In en, this message translates to:
+  /// **'Closed'**
+  String get closed;
+
+  /// No description provided for @noSupportTickets.
+  ///
+  /// In en, this message translates to:
+  /// **'You have no support tickets.'**
+  String get noSupportTickets;
+
+  /// No description provided for @noSupportTicketsDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap the + button to submit feedback or report a bug.'**
+  String get noSupportTicketsDesc;
+
+  /// No description provided for @adminReply.
+  ///
+  /// In en, this message translates to:
+  /// **'Admin Reply'**
+  String get adminReply;
+
+  /// No description provided for @manageSupportTicket.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage Support Ticket'**
+  String get manageSupportTicket;
+
+  /// No description provided for @user.
+  ///
+  /// In en, this message translates to:
+  /// **'User'**
+  String get user;
+
+  /// No description provided for @markAsProcessing.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark as Processing'**
+  String get markAsProcessing;
+
+  /// No description provided for @resolveAndSendReply.
+  ///
+  /// In en, this message translates to:
+  /// **'Resolve & Send Reply'**
+  String get resolveAndSendReply;
+
+  /// No description provided for @replyCannotBeEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Reply cannot be empty'**
+  String get replyCannotBeEmpty;
+
+  /// No description provided for @all.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get all;
+
+  /// No description provided for @active.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get active;
+
+  /// No description provided for @noTicketsFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No {status} tickets found.'**
+  String noTicketsFound(String status);
+
+  /// No description provided for @report.
+  ///
+  /// In en, this message translates to:
+  /// **'Report'**
+  String get report;
+
+  /// No description provided for @error.
+  ///
+  /// In en, this message translates to:
+  /// **'Error'**
+  String get error;
+
+  /// No description provided for @adminDashboard.
+  ///
+  /// In en, this message translates to:
+  /// **'ADMIN DASHBOARD'**
+  String get adminDashboard;
+
+  /// No description provided for @users.
+  ///
+  /// In en, this message translates to:
+  /// **'Users'**
+  String get users;
+
+  /// No description provided for @tickets.
+  ///
+  /// In en, this message translates to:
+  /// **'Tickets'**
+  String get tickets;
+
+  /// No description provided for @searchByUsernameOrId.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by username or ID...'**
+  String get searchByUsernameOrId;
+
+  /// No description provided for @errorLoadingUsers.
+  ///
+  /// In en, this message translates to:
+  /// **'Error loading users'**
+  String get errorLoadingUsers;
+
+  /// No description provided for @noRegisteredUsers.
+  ///
+  /// In en, this message translates to:
+  /// **'No registered users found.'**
+  String get noRegisteredUsers;
+
+  /// No description provided for @noUsersMatching.
+  ///
+  /// In en, this message translates to:
+  /// **'No users matching \"{query}\"'**
+  String noUsersMatching(String query);
+
+  /// No description provided for @adminLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'ADMIN'**
+  String get adminLabel;
+
+  /// No description provided for @userLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'USER'**
+  String get userLabel;
+
+  /// No description provided for @online.
+  ///
+  /// In en, this message translates to:
+  /// **'Online'**
+  String get online;
+
+  /// No description provided for @offline.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline'**
+  String get offline;
+
+  /// No description provided for @telemetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Telemetry'**
+  String get telemetry;
+
+  /// No description provided for @history.
+  ///
+  /// In en, this message translates to:
+  /// **'History'**
+  String get history;
+
+  /// No description provided for @loginFrequency7Days.
+  ///
+  /// In en, this message translates to:
+  /// **'LOGIN FREQUENCY (7 DAYS)'**
+  String get loginFrequency7Days;
+
+  /// No description provided for @noLoginActivityFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No login activity found.'**
+  String get noLoginActivityFound;
+
+  /// No description provided for @refresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh'**
+  String get refresh;
+
+  /// No description provided for @errorLoadingLogs.
+  ///
+  /// In en, this message translates to:
+  /// **'Error loading logs'**
+  String get errorLoadingLogs;
 }
 
 class _AppLocalizationsDelegate

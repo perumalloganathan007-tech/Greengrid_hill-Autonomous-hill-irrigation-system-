@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:syncfusion_flutter_gauges/gauges.dart';
+import '../../l10n/app_localizations.dart';
 
 /// Widget to display real-time water flow rate with radial gauge
 class WaterFlowGaugeWidget extends StatelessWidget {
@@ -23,10 +24,11 @@ class WaterFlowGaugeWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final statusColor = _getStatusColor();
     final String statusText = isActive 
-        ? (flowRate > 0 ? 'Flowing' : 'Pump On / No Flow')
-        : 'Standby';
+        ? (flowRate > 0 ? l10n.statusFlowing : l10n.statusPumpOnNoFlow)
+        : l10n.statusStandby;
     
     return Container(
       height: 280,
@@ -50,7 +52,7 @@ class WaterFlowGaugeWidget extends StatelessWidget {
         child: Column(
           children: [
             Text(
-              'WATER FLOW RATE',
+              l10n.waterFlowRate.toUpperCase(),
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w900,
@@ -60,7 +62,7 @@ class WaterFlowGaugeWidget extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              pumpId.replaceAll('_', ' ').toUpperCase(),
+              pumpId.replaceAll('pump_', '${l10n.pump} ').toUpperCase(),
               style: TextStyle(
                 fontSize: 10,
                 color: Colors.white.withValues(alpha: 0.5),
@@ -140,9 +142,9 @@ class WaterFlowGaugeWidget extends StatelessWidget {
                                 letterSpacing: -1,
                               ),
                             ),
-                            const Text(
-                              'L/min',
-                              style: TextStyle(
+                            Text(
+                              l10n.litersPerMinute,
+                              style: const TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white54,

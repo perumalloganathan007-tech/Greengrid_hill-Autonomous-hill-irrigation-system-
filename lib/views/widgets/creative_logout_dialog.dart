@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 
 class CreativeLogoutDialog extends StatefulWidget {
   final VoidCallback onLogout;
@@ -164,9 +165,9 @@ class _CreativeLogoutDialogState extends State<CreativeLogoutDialog>
                     opacity: _titleOpacity,
                     child: SlideTransition(
                       position: _titleSlide,
-                      child: const Text(
-                        'Confirm Logout',
-                        style: TextStyle(
+                      child: Text(
+                        AppLocalizations.of(context)!.confirmLogout,
+                        style: const TextStyle(
                           fontSize: 26,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
@@ -180,10 +181,10 @@ class _CreativeLogoutDialogState extends State<CreativeLogoutDialog>
                     opacity: _textOpacity,
                     child: SlideTransition(
                       position: _textSlide,
-                      child: const Text(
-                        'The GreenGrid works best with your care. Are you sure you want to leave the system?',
+                      child: Text(
+                        AppLocalizations.of(context)!.logoutConfirmationDesc,
                         textAlign: TextAlign.center,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 15,
                           color: Colors.grey,
                           height: 1.5,
@@ -206,9 +207,9 @@ class _CreativeLogoutDialogState extends State<CreativeLogoutDialog>
                                 side: BorderSide(color: Colors.green.withValues(alpha: 0.5)),
                               ),
                             ),
-                            child: const Text(
-                              'CANCEL',
-                              style: TextStyle(
+                            child: Text(
+                              AppLocalizations.of(context)!.cancel.toUpperCase(),
+                              style: const TextStyle(
                                 color: Colors.green,
                                 fontWeight: FontWeight.bold,
                                 letterSpacing: 1.1,
@@ -233,9 +234,9 @@ class _CreativeLogoutDialogState extends State<CreativeLogoutDialog>
                                 borderRadius: BorderRadius.circular(12),
                               ),
                             ),
-                            child: const Text(
-                              'LOGOUT',
-                              style: TextStyle(
+                            child: Text(
+                              AppLocalizations.of(context)!.logout.toUpperCase(),
+                              style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 letterSpacing: 1.1,
                               ),

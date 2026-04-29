@@ -5,6 +5,7 @@ import 'dashboard_screen.dart';
 import 'analytics_screen.dart';
 import '../../services/user_service.dart';
 import '../../services/presence_service.dart';
+import '../../l10n/app_localizations.dart';
 
 /// Screen for Admins to monitor specific user activity
 class AdminActivityMonitorScreen extends StatelessWidget {
@@ -14,6 +15,7 @@ class AdminActivityMonitorScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return DefaultTabController(
       length: 3,
       child: Scaffold(
@@ -50,7 +52,7 @@ class AdminActivityMonitorScreen extends StatelessWidget {
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            isOnline ? 'Online' : 'Offline',
+                            isOnline ? l10n.online : l10n.offline,
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.normal,
@@ -67,14 +69,14 @@ class AdminActivityMonitorScreen extends StatelessWidget {
               );
             },
           ),
-          bottom: const TabBar(
-            indicatorColor: Color(0xFF00E676),
-            labelColor: Color(0xFF00E676),
+          bottom: TabBar(
+            indicatorColor: const Color(0xFF00E676),
+            labelColor: const Color(0xFF00E676),
             unselectedLabelColor: Colors.grey,
             tabs: [
-              Tab(icon: Icon(Icons.dashboard_outlined), text: 'TELEMETRY'),
-              Tab(icon: Icon(Icons.analytics_outlined), text: 'ANALYTICS'),
-              Tab(icon: Icon(Icons.history_outlined), text: 'HISTORY'),
+              Tab(icon: const Icon(Icons.dashboard_outlined), text: l10n.telemetry.toUpperCase()),
+              Tab(icon: const Icon(Icons.analytics_outlined), text: l10n.analytics.toUpperCase()),
+              Tab(icon: const Icon(Icons.history_outlined), text: l10n.history.toUpperCase()),
             ],
           ),
         ),

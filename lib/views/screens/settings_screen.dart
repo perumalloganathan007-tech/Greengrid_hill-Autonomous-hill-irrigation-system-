@@ -94,7 +94,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 12),
           _buildSwitchTile(
             title: l10n.enableNotifications,
-            subtitle: 'Receive alerts for critical moisture levels',
+            subtitle: l10n.enableNotificationsDesc,
             value: _notificationsEnabled,
             icon: Icons.notifications,
             onChanged: (value) {
@@ -103,7 +103,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           _buildSwitchTile(
             title: l10n.autoModeByDefault,
-            subtitle: 'New valves start in automatic mode',
+            subtitle: l10n.autoModeByDefaultDesc,
             value: _autoModeEnabled,
             icon: Icons.auto_mode,
             onChanged: (value) {
@@ -124,7 +124,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       const Icon(Icons.refresh, color: Colors.blue),
                       const SizedBox(width: 12),
                       Text(
-                        '${l10n.refreshInterval}: $_refreshInterval seconds',
+                        '${l10n.refreshInterval}: $_refreshInterval ${l10n.seconds}',
                         style: const TextStyle(fontSize: 16),
                       ),
                     ],
@@ -134,7 +134,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     min: 1,
                     max: 30,
                     divisions: 29,
-                    label: '$_refreshInterval sec',
+                    label: '$_refreshInterval ${l10n.sec}',
                     onChanged: (value) {
                       setState(() => _refreshInterval = value.toInt());
                     },
@@ -223,11 +223,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 24),
           _buildSectionHeader(l10n.about),
           const SizedBox(height: 12),
-          const Card(
+          Card(
             child: ListTile(
-              leading: Icon(Icons.info, color: Colors.green),
-              title: Text('GreenGrid Hill'),
-              subtitle: Text('Version 1.0.0\nAutonomous Hillside Irrigation System'),
+              leading: const Icon(Icons.info, color: Colors.green),
+              title: const Text('GreenGrid Hill'),
+              subtitle: Text('${l10n.version} 1.0.0\n${l10n.appDescription}'),
             ),
           ),
           const SizedBox(height: 12),
@@ -235,7 +235,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: ListTile(
               leading: const Icon(Icons.bug_report, color: Colors.orange),
               title: Text(l10n.testConnection),
-              subtitle: const Text('Verify ESP32 connectivity'),
+              subtitle: Text(l10n.testConnectionDesc),
               trailing: const Icon(Icons.arrow_forward_ios, size: 16),
               onTap: _testConnection,
             ),
@@ -296,15 +296,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _testConnection() async {
+    final l10n = AppLocalizations.of(context)!;
+    
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const AlertDialog(
+      builder: (context) => AlertDialog(
         content: Row(
           children: [
-            CircularProgressIndicator(),
-            SizedBox(width: 20),
-            Text('Testing connection...'),
+            const CircularProgressIndicator(),
+            const SizedBox(width: 20),
+            Text(l10n.testingConnection),
           ],
         ),
       ),
@@ -318,8 +320,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('Connection Test'),
-          content: const Text('ESP32 connection successful!\nLatency: 45ms'),
+          title: Text(l10n.connectionTest),
+          content: Text(l10n.connectionSuccessful),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),

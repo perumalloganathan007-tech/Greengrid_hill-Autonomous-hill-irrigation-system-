@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
 import '../../services/audit_service.dart';
+import '../../l10n/app_localizations.dart';
 
 class AdminUserActivityTab extends StatefulWidget {
   final String userId;
@@ -61,6 +62,7 @@ class _AdminUserActivityTabState extends State<AdminUserActivityTab> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return FutureBuilder<List<Map<String, dynamic>>>(
       future: _logsFuture,
       builder: (context, snapshot) {
@@ -73,7 +75,7 @@ class _AdminUserActivityTabState extends State<AdminUserActivityTab> {
         if (snapshot.hasError) {
           return Center(
             child: Text(
-              'Error loading logs: ${snapshot.error}',
+              '${l10n.errorLoadingLogs}: ${snapshot.error}',
               style: const TextStyle(color: Color(0xFFFF1744)),
             ),
           );
@@ -108,9 +110,9 @@ class _AdminUserActivityTabState extends State<AdminUserActivityTab> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              'LOGIN FREQUENCY (7 DAYS)',
-                              style: TextStyle(
+                            Text(
+                              l10n.loginFrequency7Days,
+                              style: const TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.bold,
                                 color: Color(0xFF00E5FF),
@@ -168,15 +170,15 @@ class _AdminUserActivityTabState extends State<AdminUserActivityTab> {
                       children: [
                         const Icon(Icons.history, size: 48, color: Colors.grey),
                         const SizedBox(height: 16),
-                        const Text(
-                          'No login activity found.',
-                          style: TextStyle(color: Colors.grey),
+                        Text(
+                          l10n.noLoginActivityFound,
+                          style: const TextStyle(color: Colors.grey),
                         ),
                         TextButton(
                           onPressed: _fetchLogs,
-                          child: const Text(
-                            'Refresh',
-                            style: TextStyle(color: Color(0xFF00E5FF)),
+                          child: Text(
+                            l10n.refresh,
+                            style: const TextStyle(color: Color(0xFF00E5FF)),
                           ),
                         ),
                       ],

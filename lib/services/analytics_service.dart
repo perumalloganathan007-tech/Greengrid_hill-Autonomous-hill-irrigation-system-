@@ -1,6 +1,8 @@
 import 'package:firebase_database/firebase_database.dart';
 import 'package:intl/intl.dart';
+import 'dart:math' as math;
 import '../models/water_usage.dart';
+import '../models/environment_data.dart';
 
 /// Service for retrieving and analyzing historical water usage data
 class AnalyticsService {
@@ -105,8 +107,11 @@ class AnalyticsService {
   Future<List<Map<String, dynamic>>> getYearlySummarizedUsage(int year) async {
     final startDate = DateTime(year, 1, 1);
     final endDate = DateTime(year, 12, 31, 23, 59, 59);
-    
-    final dailyData = await getUsageData(startDate: startDate, endDate: endDate);
+
+    final dailyData = await getUsageData(
+      startDate: startDate,
+      endDate: endDate,
+    );
     if (dailyData.isEmpty) return [];
 
     // Group by month
@@ -118,10 +123,7 @@ class AnalyticsService {
 
     final List<Map<String, dynamic>> yearlyData = [];
     for (int i = 1; i <= 12; i++) {
-      yearlyData.add({
-        'month': i,
-        'litersUsed': monthlyTotals[i] ?? 0.0,
-      });
+      yearlyData.add({'month': i, 'litersUsed': monthlyTotals[i] ?? 0.0});
     }
     return yearlyData;
   }
@@ -275,5 +277,42 @@ class AnalyticsService {
         .reduce((a, b) => a > b ? a : b);
 
     return {'average': average, 'min': min, 'max': max, 'total': total};
+  }
+
+  /// Get historical environment data (Mocked until Firebase history is implemented)
+  Future<List<EnvironmentData>> getEnvironmentHistory({
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    final List<EnvironmentData> data = [];
+    final random = math.Random();
+    DateTime current = startDate;
+
+    // Generate data points every 4 hours
+    while (current.isBefore(endDate)) {
+      // Simulate diurnal temperature variation
+      final hour = current.hour;
+      double baseTemp = 24.0;
+      if (hour > 10 && hour < 16) {
+        baseTemp += 5 + random.nextDouble() * 3; // Hotter in afternoon
+      } else if (hour < 6 || hour > 20) {
+        baseTemp -= 3 + random.nextDouble() * 2; // Cooler at night
+      } else {
+        baseTemp += random.nextDouble() * 2;
+      }
+
+      // Humidity generally inverse to temperature
+      double baseHum = 80.0 - (baseTemp - 20) * 2 + random.nextDouble() * 5;
+
+      data.add(
+        EnvironmentData(
+          temperature: baseTemp,
+          humidity: baseHum.clamp(0.0, 100.0),
+          timestamp: current,
+        ),
+      );
+      current = current.add(const Duration(hours: 4));
+    }
+    return data;
   }
 }

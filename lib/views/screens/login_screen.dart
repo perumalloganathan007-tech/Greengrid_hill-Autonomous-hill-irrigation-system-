@@ -131,7 +131,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 keyboardType: TextInputType.emailAddress,
                                 decoration: InputDecoration(
                                   labelText: AppLocalizations.of(context)!.email,
-                                  hintText: 'Enter your email',
+                                  hintText: AppLocalizations.of(context)!.enterEmail,
                                   prefixIcon: const Icon(Icons.email),
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(12),
@@ -147,7 +147,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 obscureText: _obscurePassword,
                                 decoration: InputDecoration(
                                   labelText: AppLocalizations.of(context)!.password,
-                                  hintText: 'Enter your password',
+                                  hintText: AppLocalizations.of(context)!.enterPassword,
                                   prefixIcon: const Icon(Icons.lock),
                                   suffixIcon: IconButton(
                                     icon: Icon(
@@ -246,7 +246,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text(AppLocalizations.of(context)!.dontHaveAccount),
+                        Text(
+                          AppLocalizations.of(context)!.dontHaveAccount,
+                          style: TextStyle(color: Colors.grey[800]),
+                        ),
                         TextButton(
                           onPressed: isLoading
                               ? null
@@ -260,7 +263,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                 },
                           child: Text(
                             AppLocalizations.of(context)!.signUp,
-                            style: const TextStyle(fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green[800],
+                            ),
                           ),
                         ),
                       ],

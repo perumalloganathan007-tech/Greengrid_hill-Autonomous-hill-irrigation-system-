@@ -5,6 +5,7 @@ import '../../models/sensor_data.dart';
 import '../../models/pump_status.dart';
 import '../../models/plant_profile.dart';
 import '../../models/terrace_data.dart';
+import '../../models/environment_data.dart';
 import '../../services/telemetry_service.dart';
 import '../../services/control_service.dart';
 import '../../services/notification_service.dart';
@@ -15,6 +16,7 @@ import '../../utils/constants.dart';
 import '../widgets/network_status_indicator.dart';
 import '../widgets/moisture_gauge_widget.dart';
 import '../widgets/water_flow_gauge_widget.dart';
+import '../widgets/environment_card_widget.dart';
 
 /// Main dashboard screen displaying real-time telemetry and controls
 /// Refactored for Eco-Friendly Aesthetic & Terrace Logic
@@ -29,7 +31,8 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   late final TelemetryService _telemetryService = TelemetryService(
-    userId: widget.userId ?? FirebaseAuth.instance.currentUser?.uid ?? 'test_user',
+    userId:
+        widget.userId ?? FirebaseAuth.instance.currentUser?.uid ?? 'test_user',
   );
   late ControlService _controlService;
   late SmartIrrigationService _smartIrrigationService;
@@ -38,6 +41,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   List<SensorData> _sensors = [];
   final List<PumpStatus> _pumps = [];
+  EnvironmentData? _envData;
   bool _isLoading = true;
   DateTime? _lastUpdateTime;
 
@@ -53,8 +57,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    _controlService = ControlService(esp32BaseUrl: 'http://192.168.1.100'); // Default
-    _smartIrrigationService = SmartIrrigationService(_controlService, _notificationService);
+    _controlService = ControlService(
+      esp32BaseUrl: 'http://192.168.1.100',
+    ); // Default
+    _smartIrrigationService = SmartIrrigationService(
+      _controlService,
+      _notificationService,
+    );
     _initializeData();
     _notificationService.initialize();
   }
@@ -66,7 +75,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     final esp32Url = await _prefsService.getEsp32Url();
     _controlService = ControlService(esp32BaseUrl: esp32Url);
-    _smartIrrigationService = SmartIrrigationService(_controlService, _notificationService);
+    _smartIrrigationService = SmartIrrigationService(
+      _controlService,
+      _notificationService,
+    );
 
     // Initial pump setup will now wait for telemetry to define the sensor count
     setState(() {
@@ -75,6 +87,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     // Start real-time monitoring
     _telemetryService.startSensorMonitoring();
+    _telemetryService.startEnvironmentMonitoring();
 
     // Listen to sensor stream
     _telemetryService.sensorDataStream.listen((sensors) {
@@ -83,31 +96,35 @@ class _DashboardScreenState extends State<DashboardScreen> {
           _sensors = sensors;
           _isLoading = false;
           _lastUpdateTime = DateTime.now();
-          
+
           // Dynamically synchronize the number of pumps with the number of sensors
           // This ensures that "three soil moisture widget = three terrace in valve control"
           final List<PumpStatus> syncedPumps = [];
           for (int i = 0; i < sensors.length; i++) {
             final pumpId = 'pump_${i + 1}';
             final sensor = sensors[i];
-            
+
             // Attempt to preserve existing pump status if already known
             final existingIndex = _pumps.indexWhere((p) => p.pumpId == pumpId);
             if (existingIndex != -1) {
-              syncedPumps.add(_pumps[existingIndex].copyWith(zone: sensor.location));
+              syncedPumps.add(
+                _pumps[existingIndex].copyWith(zone: sensor.location),
+              );
             } else {
-              syncedPumps.add(PumpStatus(
-                pumpId: pumpId,
-                isActive: false,
-                flowRate: 0.0,
-                pressure: 0.0,
-                lastToggled: DateTime.now(),
-                controlMode: 'Auto',
-                zone: sensor.location,
-              ));
+              syncedPumps.add(
+                PumpStatus(
+                  pumpId: pumpId,
+                  isActive: false,
+                  flowRate: 0.0,
+                  pressure: 0.0,
+                  lastToggled: DateTime.now(),
+                  controlMode: 'Auto',
+                  zone: sensor.location,
+                ),
+              );
             }
           }
-          
+
           _pumps.clear();
           _pumps.addAll(syncedPumps);
         });
@@ -117,15 +134,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
         // Check for alerts
         _notificationService.checkSensorAlerts(sensors);
-        
+
         // Auto-pump logic using SmartIrrigationService
         _checkAutoIrrigation();
       }
     });
 
+    // Listen to environment stream
+    _telemetryService.environmentDataStream.listen((envData) {
+      if (mounted) {
+        setState(() {
+          _envData = envData;
+        });
+        _notificationService.checkEnvironmentAlerts(envData);
+      }
+    });
+
     // Load initial pump data
     _loadPumpData();
-    
+
     // Fallback if data loading takes too long or fails
     Future.delayed(const Duration(seconds: 10), () {
       if (mounted && _isLoading) {
@@ -144,10 +171,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
       if (zoneMatch != null) {
         final zoneNumStr = zoneMatch.group(1);
         final zoneNum = int.tryParse(zoneNumStr ?? '1') ?? 1;
-        
+
         // Find matching pump for this zone
         final pumpIndex = _pumps.indexWhere((p) => p.pumpId == 'pump_$zoneNum');
-        
+
         if (pumpIndex != -1) {
           final pump = _pumps[pumpIndex];
           // Only auto-trigger if in Auto mode
@@ -157,7 +184,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               zoneName: sensor.location,
               slopeFactor: 1.0,
             );
-            
+
             _smartIrrigationService.evaluateAndTrigger(
               sensorData: sensor,
               plantProfile: _defaultPlant,
@@ -181,21 +208,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
       final results = await Future.wait(futures);
       final List<PumpStatus> updatedPumps = [];
-      
+
       for (int i = 0; i < _pumps.length; i++) {
         final pump = _pumps[i];
         final status = results[i];
-        
-        updatedPumps.add(status ?? 
-          PumpStatus(
-            pumpId: pump.pumpId,
-            isActive: pump.isActive,
-            flowRate: pump.flowRate,
-            pressure: pump.pressure,
-            lastToggled: pump.lastToggled,
-            controlMode: pump.controlMode,
-            zone: pump.zone,
-          )
+
+        updatedPumps.add(
+          status ??
+              PumpStatus(
+                pumpId: pump.pumpId,
+                isActive: pump.isActive,
+                flowRate: pump.flowRate,
+                pressure: pump.pressure,
+                lastToggled: pump.lastToggled,
+                controlMode: pump.controlMode,
+                zone: pump.zone,
+              ),
         );
       }
 
@@ -225,7 +253,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       } else {
         await _controlService.setManualMode(pump.pumpId);
       }
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -243,10 +271,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _handlePumpToggle(int index, bool turnOn) async {
     final pump = _pumps[index];
-    await _controlService.togglePump(
-      pumpId: pump.pumpId,
-      turnOn: turnOn,
-    );
+    await _controlService.togglePump(pumpId: pump.pumpId, turnOn: turnOn);
 
     if (mounted) {
       setState(() {
@@ -257,13 +282,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(turnOn ? AppLocalizations.of(context)!.valveActivated : AppLocalizations.of(context)!.valveDeactivated),
+          content: Text(
+            turnOn
+                ? AppLocalizations.of(context)!.valveActivated
+                : AppLocalizations.of(context)!.valveDeactivated,
+          ),
           backgroundColor: const Color(0xFF1B5E20),
         ),
       );
     }
   }
-
 
   @override
   void dispose() {
@@ -277,7 +305,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFF121212), // Material Dark BG
       appBar: AppBar(
-        title: Text(AppLocalizations.of(context)!.dashboard, style: const TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(
+          AppLocalizations.of(context)!.dashboard,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
         backgroundColor: const Color(0xFF388E3C), // Emerald Green
         foregroundColor: Colors.white,
         elevation: 4,
@@ -289,13 +320,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                   Text(
+                  Text(
                     AppLocalizations.of(context)!.lastSync.toUpperCase(),
-                    style: const TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Colors.white54),
+                    style: const TextStyle(
+                      fontSize: 8,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white54,
+                    ),
                   ),
                   Text(
                     DateFormat('HH:mm:ss').format(_lastUpdateTime!),
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
                 ],
               ),
@@ -310,7 +349,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: Color(0xFF4CAF50)))
+          ? const Center(
+              child: CircularProgressIndicator(color: Color(0xFF4CAF50)),
+            )
           : LayoutBuilder(
               builder: (context, constraints) {
                 final double width = constraints.maxWidth;
@@ -339,11 +380,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildSectionHeader(AppLocalizations.of(context)!.soilMoistureSensors),
+                        EnvironmentCardWidget(environmentData: _envData),
+                        const SizedBox(height: 24),
+                        _buildSectionHeader(
+                          AppLocalizations.of(context)!.soilMoistureSensors,
+                        ),
                         const SizedBox(height: 16),
                         _buildMoistureGrid(crossAxisCount, aspectRatio),
                         const SizedBox(height: 32),
-                        _buildSectionHeader(AppLocalizations.of(context)!.valveControls),
+                        _buildSectionHeader(
+                          AppLocalizations.of(context)!.valveControls,
+                        ),
                         const SizedBox(height: 16),
                         _buildValveControls(),
                         const SizedBox(height: 32),
@@ -372,7 +419,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
-          child: Text(AppLocalizations.of(context)!.noSensorsFound, style: const TextStyle(color: Colors.white54)),
+          child: Text(
+            AppLocalizations.of(context)!.noSensorsFound,
+            style: const TextStyle(color: Colors.white54),
+          ),
         ),
       );
     }
@@ -411,7 +461,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
-          child: Text(AppLocalizations.of(context)!.noValvesAvailable, style: const TextStyle(color: Colors.white54)),
+          child: Text(
+            AppLocalizations.of(context)!.noValvesAvailable,
+            style: const TextStyle(color: Colors.white54),
+          ),
         ),
       );
     }
@@ -421,98 +474,121 @@ class _DashboardScreenState extends State<DashboardScreen> {
       children: [
         // Valve Cards
         ...List.generate(_pumps.length, (index) {
-        final pump = _pumps[index];
-        return Card(
-          color: const Color(0xFF1E1E1E),
-          margin: const EdgeInsets.only(bottom: 12),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          child: Column(
-            children: [
-              ListTile(
-                leading: Icon(
-                  Icons.settings_input_component,
-                  color: pump.isActive ? Colors.green : Colors.grey,
-                ),
-                title: Text(
-                  pump.zone,
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                ),
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Text(
-                          AppLocalizations.of(context)!.autoMode,
-                          style: TextStyle(
-                            color: pump.controlMode == 'Auto' ? Colors.green.shade300 : Colors.white38,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        SizedBox(
-                          height: 30,
-                          child: Transform.scale(
-                            scale: 0.7,
-                            child: Switch(
-                              value: pump.controlMode == 'Auto',
-                              onChanged: (isAuto) => _setPumpMode(index, isAuto ? 'Auto' : 'Manual'),
-                              activeTrackColor: Colors.green.withValues(alpha: 0.3),
-                              activeThumbColor: Colors.green,
+          final pump = _pumps[index];
+          return Card(
+            color: const Color(0xFF1E1E1E),
+            margin: const EdgeInsets.only(bottom: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              children: [
+                ListTile(
+                  leading: Icon(
+                    Icons.settings_input_component,
+                    color: pump.isActive ? Colors.green : Colors.grey,
+                  ),
+                  title: Text(
+                    pump.zone.replaceAll(
+                      'Terrace Zone',
+                      AppLocalizations.of(context)!.terraceZone,
+                    ),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            AppLocalizations.of(context)!.autoMode,
+                            style: TextStyle(
+                              color: pump.controlMode == 'Auto'
+                                  ? Colors.green.shade300
+                                  : Colors.white38,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
+                          SizedBox(
+                            height: 30,
+                            child: Transform.scale(
+                              scale: 0.7,
+                              child: Switch(
+                                value: pump.controlMode == 'Auto',
+                                onChanged: (isAuto) => _setPumpMode(
+                                  index,
+                                  isAuto ? 'Auto' : 'Manual',
+                                ),
+                                activeTrackColor: Colors.green.withValues(
+                                  alpha: 0.3,
+                                ),
+                                activeThumbColor: Colors.green,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      Text(
+                        pump.controlMode == 'Auto'
+                            ? AppLocalizations.of(context)!.statusAutomatic
+                            : (pump.isActive
+                                  ? AppLocalizations.of(context)!.statusManualOn
+                                  : AppLocalizations.of(
+                                      context,
+                                    )!.statusSystemOff),
+                        style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.5,
+                          color: pump.controlMode == 'Auto'
+                              ? Colors.green.shade400
+                              : (pump.isActive
+                                    ? Colors.orange.shade400
+                                    : Colors.red.shade400),
                         ),
-                      ],
-                    ),
-                    Text(
-                      pump.controlMode == 'Auto' 
-                          ? AppLocalizations.of(context)!.statusAutomatic 
-                          : (pump.isActive ? AppLocalizations.of(context)!.statusManualOn : AppLocalizations.of(context)!.statusSystemOff),
-                      style: TextStyle(
-                        fontSize: 9,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.5,
-                        color: pump.controlMode == 'Auto' 
-                            ? Colors.green.shade400 
-                            : (pump.isActive ? Colors.orange.shade400 : Colors.red.shade400),
                       ),
-                    ),
-                  ],
-                ),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      AppLocalizations.of(context)!.manualMode,
-                      style: TextStyle(
-                        color: pump.controlMode == 'Manual' ? Colors.orange.shade300 : Colors.white24,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
+                    ],
+                  ),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        AppLocalizations.of(context)!.manualMode,
+                        style: TextStyle(
+                          color: pump.controlMode == 'Manual'
+                              ? Colors.orange.shade300
+                              : Colors.white24,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                    Switch(
-                      value: pump.isActive,
-                      onChanged: pump.controlMode == 'Manual' 
-                        ? (val) => _handlePumpToggle(index, val)
-                        : null, // Disable switches if in Auto mode
-                      activeTrackColor: Colors.green.withValues(alpha: 0.3),
-                      activeThumbColor: Colors.green,
-                    ),
-                  ],
-                ),
-              ),
-              if (pump.isActive)
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: WaterFlowGaugeWidget(
-                    flowRate: pump.flowRate,
-                    pumpId: pump.pumpId,
-                    isActive: pump.isActive,
+                      Switch(
+                        value: pump.isActive,
+                        onChanged: pump.controlMode == 'Manual'
+                            ? (val) => _handlePumpToggle(index, val)
+                            : null, // Disable switches if in Auto mode
+                        activeTrackColor: Colors.green.withValues(alpha: 0.3),
+                        activeThumbColor: Colors.green,
+                      ),
+                    ],
                   ),
                 ),
-            ],
-          ),
-        );
+                if (pump.isActive)
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: WaterFlowGaugeWidget(
+                      flowRate: pump.flowRate,
+                      pumpId: pump.pumpId,
+                      isActive: pump.isActive,
+                    ),
+                  ),
+              ],
+            ),
+          );
         }),
       ],
     );

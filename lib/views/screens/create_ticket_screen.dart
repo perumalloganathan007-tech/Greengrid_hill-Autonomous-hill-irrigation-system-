@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../services/ticket_service.dart';
+import '../../l10n/app_localizations.dart';
 
 class CreateTicketScreen extends StatefulWidget {
   const CreateTicketScreen({super.key});
@@ -17,7 +18,20 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
   String _selectedType = 'Suggestion';
   bool _isSubmitting = false;
 
-  final List<String> _ticketTypes = ['Bug', 'Suggestion', 'Other'];
+  List<String> _getTicketTypes() => ['Bug', 'Suggestion', 'Other'];
+
+  String _getTypeText(String type, AppLocalizations l10n) {
+    switch (type) {
+      case 'Bug':
+        return l10n.bug;
+      case 'Suggestion':
+        return l10n.suggestion;
+      case 'Other':
+        return l10n.other;
+      default:
+        return type;
+    }
+  }
 
   Future<void> _submitTicket() async {
     if (!_formKey.currentState!.validate()) return;
@@ -40,15 +54,17 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
       );
 
       if (mounted) {
+        final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Support ticket submitted successfully!')),
+          SnackBar(content: Text(l10n.ticketSubmitted)),
         );
         Navigator.of(context).pop();
       }
     } catch (e) {
       if (mounted) {
+        final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}')),
+          SnackBar(content: Text('${l10n.error}: ${e.toString()}')),
         );
       }
     } finally {
@@ -68,9 +84,10 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Submit Feedback / Ticket'),
+        title: Text(l10n.submitFeedback),
         backgroundColor: Colors.green[700],
         foregroundColor: Colors.white,
       ),
@@ -81,21 +98,21 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text(
-                'How can we help?',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              Text(
+                l10n.howCanWeHelp,
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
                 initialValue: _selectedType,
-                decoration: const InputDecoration(
-                  labelText: 'Issue Type',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: l10n.issueType,
+                  border: const OutlineInputBorder(),
                 ),
-                items: _ticketTypes.map((type) {
+                items: _getTicketTypes().map((type) {
                   return DropdownMenuItem(
                     value: type,
-                    child: Text(type),
+                    child: Text(_getTypeText(type, l10n)),
                   );
                 }).toList(),
                 onChanged: (value) {
@@ -110,18 +127,18 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
               TextFormField(
                 controller: _descriptionController,
                 maxLines: 5,
-                decoration: const InputDecoration(
-                  labelText: 'Description',
+                decoration: InputDecoration(
+                  labelText: l10n.description,
                   alignLabelWithHint: true,
-                  hintText: 'Please provide details about the bug or your feedback...',
-                  border: OutlineInputBorder(),
+                  hintText: l10n.enterDescription,
+                  border: const OutlineInputBorder(),
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return 'Please enter a description';
+                    return l10n.enterDescription;
                   }
                   if (value.trim().length < 10) {
-                    return 'Description is too short';
+                    return l10n.descriptionTooShort;
                   }
                   return null;
                 },
@@ -146,9 +163,9 @@ class _CreateTicketScreenState extends State<CreateTicketScreen> {
                           valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                         ),
                       )
-                    : const Text(
-                        'SUBMIT TICKET',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    : Text(
+                        l10n.submitTicket,
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                       ),
               ),
               const SizedBox(height: 16),

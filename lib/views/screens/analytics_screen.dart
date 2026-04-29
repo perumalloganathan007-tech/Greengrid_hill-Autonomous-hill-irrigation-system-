@@ -4,6 +4,7 @@ import 'package:syncfusion_flutter_charts/charts.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/water_usage.dart';
 import '../../models/pump_status.dart';
+import '../../models/environment_data.dart';
 import '../../services/analytics_service.dart';
 import '../../services/telemetry_service.dart';
 import '../widgets/water_flow_gauge_widget.dart';
@@ -25,6 +26,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     userId: widget.userId ?? FirebaseAuth.instance.currentUser?.uid ?? 'test_user',
   );
   List<WaterUsage> _weeklyData = [];
+  List<EnvironmentData> _envHistory = [];
   bool _isLoading = true;
   String _selectedPeriod = 'Week';
   
@@ -93,6 +95,11 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         data = []; // Not used for Year view
       }
 
+      final envData = await _analyticsService.getEnvironmentHistory(
+        startDate: startDate,
+        endDate: endDate,
+      );
+
       // Calculate statistics
       final totalUsed = await _analyticsService.getTotalLitersUsed(
         startDate: startDate,
@@ -118,6 +125,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
       if (mounted) {
         setState(() {
           _weeklyData = data;
+          _envHistory = envData;
           _totalUsed = totalUsed;
           _totalSaved = totalSaved;
           _efficiency = efficiency;
@@ -132,6 +140,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
       if (mounted) {
         setState(() {
           _weeklyData = [];
+          _envHistory = [];
           _totalUsed = 0.0;
           _totalSaved = 0.0;
           _efficiency = 0.0;
@@ -192,6 +201,12 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                       ],
                       _buildStatisticsCards(),
                       const SizedBox(height: 24),
+                      if (_envHistory.isNotEmpty) ...[
+                        _buildSectionHeader(AppLocalizations.of(context)!.climateAnalysis),
+                        const SizedBox(height: 8),
+                        _buildClimateChart(),
+                        const SizedBox(height: 24),
+                      ],
                       _buildSectionHeader(AppLocalizations.of(context)!.usageAnalysis),
                       const SizedBox(height: 8),
                       _buildMainUsageChart(),
@@ -273,11 +288,12 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   }
 
   Widget _buildTrendCard() {
+    final l10n = AppLocalizations.of(context)!;
     final trendText = _trend > 0 
-        ? 'Increasing +${_trend.toStringAsFixed(1)} L/day'
+        ? l10n.increasing(_trend.toStringAsFixed(1))
         : _trend < 0
-            ? 'Decreasing ${_trend.toStringAsFixed(1)} L/day'
-            : 'Stable';
+            ? l10n.decreasing(_trend.toStringAsFixed(1))
+            : l10n.stable;
     final trendIcon = _trend > 0 
         ? Icons.trending_up 
         : _trend < 0 
@@ -322,14 +338,22 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text(
-                  'Avg: ${_statistics['average']?.toStringAsFixed(0) ?? '0'} L',
-                  style: const TextStyle(fontSize: 12),
-                ),
-                Text(
-                  'Range: ${_statistics['min']?.toStringAsFixed(0) ?? '0'}-${_statistics['max']?.toStringAsFixed(0) ?? '0'} L',
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                ),
+                Builder(builder: (context) {
+                  final l10n = AppLocalizations.of(context)!;
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        '${l10n.avg}: ${_statistics['average']?.toStringAsFixed(0) ?? '0'} L',
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                      Text(
+                        '${l10n.range}: ${_statistics['min']?.toStringAsFixed(0) ?? '0'}-${_statistics['max']?.toStringAsFixed(0) ?? '0'} L',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      ),
+                    ],
+                  );
+                }),
               ],
             ),
           ],
@@ -380,6 +404,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   }
 
   Widget _buildSavingsChart() {
+    final l10n = AppLocalizations.of(context)!;
     return Card(
       elevation: 4,
       child: Padding(
@@ -388,14 +413,14 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
           height: 250,
           child: SfCartesianChart(
             primaryXAxis: const CategoryAxis(),
-            primaryYAxis: const NumericAxis(
-              title: AxisTitle(text: 'Liters'),
-            ),
+              primaryYAxis: NumericAxis(
+                title: AxisTitle(text: l10n.liters),
+              ),
             legend: const Legend(isVisible: true),
             tooltipBehavior: TooltipBehavior(enable: true),
             series: <CartesianSeries>[
               ColumnSeries<WaterUsage, String>(
-                name: 'Saved',
+                name: l10n.saved,
                 dataSource: _weeklyData,
                 xValueMapper: (WaterUsage usage, _) => DateFormat('E').format(usage.date),
                 yValueMapper: (WaterUsage usage, _) => usage.litersSaved,
@@ -409,7 +434,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   }
 
   Widget _buildMainUsageChart() {
-    String yAxisTitle = _selectedPeriod == 'Day' ? 'Flow Rate (L/min)' : 'Liters';
+    final l10n = AppLocalizations.of(context)!;
+    String yAxisTitle = _selectedPeriod == 'Day' ? '${l10n.waterFlowRate} (${l10n.litersPerMinute})' : l10n.liters;
     
     return Card(
       elevation: 4,
@@ -420,7 +446,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
           height: 300,
           child: SfCartesianChart(
             primaryXAxis: _selectedPeriod == 'Day' 
-                ? const NumericAxis(title: AxisTitle(text: 'Hour of Day (24h)'), interval: 4)
+                ? NumericAxis(title: AxisTitle(text: l10n.hourOfDay), interval: 4)
                 : const CategoryAxis(),
             primaryYAxis: NumericAxis(
               title: AxisTitle(text: yAxisTitle),
@@ -431,7 +457,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
             series: <CartesianSeries>[
               if (_selectedPeriod == 'Day')
                 AreaSeries<Map<String, dynamic>, int>(
-                  name: 'Flow Level',
+                  name: l10n.flowLevel,
                   dataSource: _hourlyData,
                   xValueMapper: (data, _) => data['hour'] as int,
                   yValueMapper: (data, _) => data['litersUsed'] as double,
@@ -441,7 +467,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                 )
               else if (_selectedPeriod == 'Year')
                 ColumnSeries<Map<String, dynamic>, String>(
-                  name: 'Monthly Total',
+                  name: l10n.monthlyTotal,
                   dataSource: _yearlyData,
                   xValueMapper: (data, _) => DateFormat('MMM').format(DateTime(2026, data['month'] as int)),
                   yValueMapper: (data, _) => data['litersUsed'] as double,
@@ -453,7 +479,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                 )
               else
                 LineSeries<WaterUsage, String>(
-                  name: 'Daily Usage',
+                  name: l10n.dailyUsage,
                   dataSource: _weeklyData,
                   xValueMapper: (WaterUsage usage, _) => 
                       _selectedPeriod == 'Week' 
@@ -471,7 +497,54 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
   }
 
 
+  Widget _buildClimateChart() {
+    final l10n = AppLocalizations.of(context)!;
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: SizedBox(
+          height: 250,
+          child: SfCartesianChart(
+            primaryXAxis: const CategoryAxis(),
+            primaryYAxis: const NumericAxis(
+              title: AxisTitle(text: '°C / %'),
+            ),
+            legend: const Legend(isVisible: true, position: LegendPosition.bottom),
+            tooltipBehavior: TooltipBehavior(enable: true),
+            series: <CartesianSeries>[
+              SplineSeries<EnvironmentData, String>(
+                name: l10n.temperature,
+                dataSource: _envHistory,
+                xValueMapper: (data, _) => _selectedPeriod == 'Day'
+                    ? DateFormat('HH:mm').format(data.timestamp)
+                    : DateFormat('MMM d').format(data.timestamp),
+                yValueMapper: (data, _) => data.temperature,
+                color: Colors.orangeAccent,
+                width: 2,
+                markerSettings: const MarkerSettings(isVisible: false),
+              ),
+              SplineSeries<EnvironmentData, String>(
+                name: l10n.humidity,
+                dataSource: _envHistory,
+                xValueMapper: (data, _) => _selectedPeriod == 'Day'
+                    ? DateFormat('HH:mm').format(data.timestamp)
+                    : DateFormat('MMM d').format(data.timestamp),
+                yValueMapper: (data, _) => data.humidity,
+                color: Colors.blueAccent,
+                width: 2,
+                markerSettings: const MarkerSettings(isVisible: false),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildActivationChart() {
+    final l10n = AppLocalizations.of(context)!;
     return Card(
       elevation: 4,
       child: Padding(
@@ -480,8 +553,8 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
           height: 250,
           child: SfCartesianChart(
             primaryXAxis: const CategoryAxis(),
-            primaryYAxis: const NumericAxis(
-              title: AxisTitle(text: 'Activations'),
+            primaryYAxis: NumericAxis(
+              title: AxisTitle(text: l10n.activations),
             ),
             tooltipBehavior: TooltipBehavior(enable: true),
             series: <CartesianSeries>[

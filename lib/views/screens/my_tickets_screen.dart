@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import '../../models/ticket_model.dart';
 import '../../services/ticket_service.dart';
+import '../../l10n/app_localizations.dart';
 import 'create_ticket_screen.dart';
 
 class MyTicketsScreen extends StatefulWidget {
@@ -30,18 +31,45 @@ class _MyTicketsScreenState extends State<MyTicketsScreen> {
     }
   }
 
+  String _getStatusText(String status, AppLocalizations l10n) {
+    switch (status) {
+      case 'Open':
+        return l10n.open;
+      case 'Processing':
+        return l10n.processing;
+      case 'Resolved':
+        return l10n.resolved;
+      case 'Closed':
+        return l10n.closed;
+      default:
+        return status;
+    }
+  }
+
+  String _getTypeText(String type, AppLocalizations l10n) {
+    switch (type) {
+      case 'Bug':
+        return l10n.bug;
+      case 'Suggestion':
+        return l10n.suggestion;
+      default:
+        return l10n.other;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     if (_userId == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('My Tickets')),
-        body: const Center(child: Text('You must be logged in.')),
+        appBar: AppBar(title: Text(l10n.mySupportTickets)),
+        body: Center(child: Text(l10n.signInToContinue)),
       );
     }
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('My Support Tickets'),
+        title: Text(l10n.mySupportTickets),
         backgroundColor: Colors.green[700],
         foregroundColor: Colors.white,
       ),
@@ -54,7 +82,7 @@ class _MyTicketsScreenState extends State<MyTicketsScreen> {
         },
         backgroundColor: Colors.green[700],
         icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text('New Ticket', style: TextStyle(color: Colors.white)),
+        label: Text(l10n.newTicket, style: const TextStyle(color: Colors.white)),
       ),
       body: StreamBuilder<List<TicketModel>>(
         stream: _ticketService.getUserTicketsStream(_userId),
@@ -64,17 +92,28 @@ class _MyTicketsScreenState extends State<MyTicketsScreen> {
           }
 
           if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
+            return Center(child: Text('${l10n.error}: ${snapshot.error}'));
           }
 
           final tickets = snapshot.data ?? [];
 
           if (tickets.isEmpty) {
-            return const Center(
-              child: Text(
-                'You have no support tickets.\nTap the + button to submit feedback or report a bug.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 16, color: Colors.grey),
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    l10n.noSupportTickets,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    l10n.noSupportTicketsDesc,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 14, color: Colors.grey),
+                  ),
+                ],
               ),
             );
           }
@@ -103,7 +142,7 @@ class _MyTicketsScreenState extends State<MyTicketsScreen> {
                               border: Border.all(color: _getStatusColor(ticket.status)),
                             ),
                             child: Text(
-                              ticket.status.toUpperCase(),
+                              _getStatusText(ticket.status, l10n).toUpperCase(),
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
@@ -131,7 +170,7 @@ class _MyTicketsScreenState extends State<MyTicketsScreen> {
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            '${ticket.type} Report',
+                            '${_getTypeText(ticket.type, l10n)} ${l10n.report}',
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
@@ -157,13 +196,13 @@ class _MyTicketsScreenState extends State<MyTicketsScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Row(
+                              Row(
                                 children: [
-                                  Icon(Icons.admin_panel_settings, size: 16, color: Colors.green),
-                                  SizedBox(width: 8),
+                                  const Icon(Icons.admin_panel_settings, size: 16, color: Colors.green),
+                                  const SizedBox(width: 8),
                                   Text(
-                                    'Admin Reply',
-                                    style: TextStyle(
+                                    l10n.adminReply,
+                                    style: const TextStyle(
                                       fontWeight: FontWeight.bold,
                                       color: Colors.green,
                                     ),

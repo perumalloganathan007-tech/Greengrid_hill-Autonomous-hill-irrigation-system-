@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../viewmodels/auth_bloc.dart';
 import '../../viewmodels/auth_event.dart';
@@ -38,7 +39,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     return Scaffold(
       backgroundColor: Colors.green[50],
       appBar: AppBar(
-        title: const Text('Reset Password'),
+        title: Text(AppLocalizations.of(context)!.resetPassword),
         backgroundColor: Colors.green[700],
         foregroundColor: Colors.white,
       ),
@@ -46,10 +47,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         listener: (context, state) {
           if (state is PasswordResetSent) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Password reset email sent! Check your inbox.'),
+              SnackBar(
+                content: Text(AppLocalizations.of(context)!.passwordResetSent),
                 backgroundColor: Colors.green,
-                duration: Duration(seconds: 5),
+                duration: const Duration(seconds: 5),
               ),
             );
             Navigator.of(context).pop(); // Return to login
@@ -95,7 +96,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     ),
                     const SizedBox(height: 20),
                     Text(
-                      'Forgot Password?',
+                      AppLocalizations.of(context)!.forgotPassword,
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
@@ -104,7 +105,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      'Enter your email to receive reset instructions',
+                      AppLocalizations.of(context)!.enterEmailToReset,
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 14,
@@ -130,8 +131,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                 controller: _emailController,
                                 keyboardType: TextInputType.emailAddress,
                                 decoration: InputDecoration(
-                                  labelText: 'Email',
-                                  hintText: 'Enter your registered email',
+                                  labelText: AppLocalizations.of(context)!.email,
+                                  hintText: AppLocalizations.of(context)!.enterRegisteredEmail,
                                   prefixIcon: const Icon(Icons.email),
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(12),
@@ -164,9 +165,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                           ),
                                         ),
                                       )
-                                    : const Text(
-                                        'Send Reset Link',
-                                        style: TextStyle(
+                                    : Text(
+                                        AppLocalizations.of(context)!.sendResetLink,
+                                        style: const TextStyle(
                                           fontSize: 16,
                                           fontWeight: FontWeight.bold,
                                         ),
@@ -182,16 +183,22 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Text('Remember your password?'),
+                        Text(
+                          AppLocalizations.of(context)!.rememberPassword,
+                          style: TextStyle(color: Colors.grey[800]),
+                        ),
                         TextButton(
                           onPressed: isLoading
                               ? null
                               : () {
                                   Navigator.of(context).pop();
                                 },
-                          child: const Text(
-                            'Sign In',
-                            style: TextStyle(fontWeight: FontWeight.bold),
+                          child: Text(
+                            AppLocalizations.of(context)!.signIn,
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green[800],
+                            ),
                           ),
                         ),
                       ],

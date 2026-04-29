@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 
 /// Splash screen with app branding
 class SplashScreen extends StatefulWidget {
@@ -57,9 +58,9 @@ class _SplashScreenState extends State<SplashScreen> {
               ),
             ),
             const SizedBox(height: 10),
-            const Text(
-              'Autonomous Hillside Irrigation',
-              style: TextStyle(
+            Text(
+              AppLocalizations.of(context)!.appTagline,
+              style: const TextStyle(
                 fontSize: 16,
                 color: Colors.white70,
               ),

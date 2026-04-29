@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../models/ticket_model.dart';
 import '../../services/ticket_service.dart';
+import '../../l10n/app_localizations.dart';
 
 class AdminTicketsScreen extends StatefulWidget {
   const AdminTicketsScreen({super.key});
@@ -28,27 +29,54 @@ class _AdminTicketsScreenState extends State<AdminTicketsScreen> {
     }
   }
 
+  String _getStatusText(String status, AppLocalizations l10n) {
+    switch (status) {
+      case 'Open':
+        return l10n.open;
+      case 'Processing':
+        return l10n.processing;
+      case 'Resolved':
+        return l10n.resolved;
+      case 'Closed':
+        return l10n.closed;
+      default:
+        return status;
+    }
+  }
+
+  String _getTypeText(String type, AppLocalizations l10n) {
+    switch (type) {
+      case 'Bug':
+        return l10n.bug;
+      case 'Suggestion':
+        return l10n.suggestion;
+      default:
+        return l10n.other;
+    }
+  }
+
   void _showTicketDialog(TicketModel ticket) {
     final replyController = TextEditingController();
     bool isSubmitting = false;
 
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
-              title: const Text('Manage Support Ticket'),
+              title: Text(l10n.manageSupportTicket),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('User: ${ticket.userEmail}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Text('${l10n.user}: ${ticket.userEmail}', style: const TextStyle(fontWeight: FontWeight.bold)),
                     const SizedBox(height: 8),
-                    Text('Type: ${ticket.type}'),
+                    Text('${l10n.issueType}: ${_getTypeText(ticket.type, l10n)}'),
                     const SizedBox(height: 8),
-                    const Text('Description:', style: TextStyle(fontWeight: FontWeight.bold)),
+                    Text('${l10n.description}:', style: const TextStyle(fontWeight: FontWeight.bold)),
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(8),
@@ -62,7 +90,7 @@ class _AdminTicketsScreenState extends State<AdminTicketsScreen> {
                     if (ticket.status == 'Open') ...[
                       ElevatedButton.icon(
                         icon: const Icon(Icons.sync),
-                        label: const Text('Mark as Processing'),
+                        label: Text(l10n.markAsProcessing),
                         onPressed: isSubmitting ? null : () async {
                           final nav = Navigator.of(context);
                           setState(() => isSubmitting = true);
@@ -73,17 +101,17 @@ class _AdminTicketsScreenState extends State<AdminTicketsScreen> {
                       const SizedBox(height: 16),
                     ],
                     if (ticket.status == 'Resolved' && ticket.adminReply != null) ...[
-                      const Text('Your Reply:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
+                      Text('${l10n.adminReply}:', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
                       const SizedBox(height: 4),
                       Text(ticket.adminReply!),
                     ] else ...[
                       TextField(
                         controller: replyController,
                         maxLines: 3,
-                        decoration: const InputDecoration(
-                          labelText: 'Admin Reply',
-                          hintText: 'Type your response to the user here...',
-                          border: OutlineInputBorder(),
+                        decoration: InputDecoration(
+                          labelText: l10n.adminReply,
+                          hintText: l10n.enterDescription,
+                          border: const OutlineInputBorder(),
                         ),
                       ),
                     ],
@@ -93,7 +121,7 @@ class _AdminTicketsScreenState extends State<AdminTicketsScreen> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel'),
+                  child: Text(l10n.cancel),
                 ),
                 if (ticket.status != 'Resolved')
                   ElevatedButton(
@@ -102,7 +130,7 @@ class _AdminTicketsScreenState extends State<AdminTicketsScreen> {
                         : () async {
                             if (replyController.text.trim().isEmpty) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Reply cannot be empty')),
+                                SnackBar(content: Text(l10n.replyCannotBeEmpty)),
                               );
                               return;
                             }
@@ -117,7 +145,7 @@ class _AdminTicketsScreenState extends State<AdminTicketsScreen> {
                     style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
                     child: isSubmitting
                         ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white))
-                        : const Text('Resolve & Send Reply', style: TextStyle(color: Colors.white)),
+                        : Text(l10n.resolveAndSendReply, style: const TextStyle(color: Colors.white)),
                   ),
               ],
             );
@@ -129,17 +157,18 @@ class _AdminTicketsScreenState extends State<AdminTicketsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       body: Column(
         children: [
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: SegmentedButton<String>(
-              segments: const [
-                ButtonSegment(value: 'All', label: Text('All')),
-                ButtonSegment(value: 'Open', label: Text('Open')),
-                ButtonSegment(value: 'Processing', label: Text('Active')),
-                ButtonSegment(value: 'Resolved', label: Text('Closed')),
+              segments: [
+                ButtonSegment(value: 'All', label: Text(l10n.all)),
+                ButtonSegment(value: 'Open', label: Text(l10n.open)),
+                ButtonSegment(value: 'Processing', label: Text(l10n.active)),
+                ButtonSegment(value: 'Resolved', label: Text(l10n.closed)),
               ],
               selected: {_filterStatus},
               onSelectionChanged: (Set<String> newSelection) {
@@ -158,7 +187,7 @@ class _AdminTicketsScreenState extends State<AdminTicketsScreen> {
                 }
 
                 if (snapshot.hasError) {
-                  return Center(child: Text('Error: ${snapshot.error}'));
+                  return Center(child: Text('${l10n.error}: ${snapshot.error}'));
                 }
 
                 var tickets = snapshot.data ?? [];
@@ -170,7 +199,7 @@ class _AdminTicketsScreenState extends State<AdminTicketsScreen> {
                 if (tickets.isEmpty) {
                   return Center(
                     child: Text(
-                      'No ${_filterStatus == 'All' ? '' : _filterStatus.toLowerCase()} tickets found.',
+                      l10n.noTicketsFound(_filterStatus == 'All' ? '' : _getStatusText(_filterStatus, l10n).toLowerCase()),
                       style: const TextStyle(color: Colors.grey),
                     ),
                   );
@@ -209,7 +238,7 @@ class _AdminTicketsScreenState extends State<AdminTicketsScreen> {
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             Text(
-                              ticket.status,
+                              _getStatusText(ticket.status, l10n),
                               style: TextStyle(
                                 color: _getStatusColor(ticket.status),
                                 fontWeight: FontWeight.bold,

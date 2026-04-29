@@ -8,6 +8,7 @@ import '../widgets/creative_logout_dialog.dart';
 import '../widgets/network_status_indicator.dart';
 import 'admin_activity_monitor_screen.dart';
 import 'admin_tickets_screen.dart';
+import '../../l10n/app_localizations.dart';
 
 /// Screen for admins to view and manage registered users
 class AdminUsersScreen extends StatefulWidget {
@@ -56,21 +57,21 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
       },
     );
   }
-
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return DefaultTabController(
       length: 2,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('ADMIN DASHBOARD'),
-          bottom: const TabBar(
+          title: Text(l10n.adminDashboard),
+          bottom: TabBar(
             tabs: [
-              Tab(icon: Icon(Icons.people), text: 'Users'),
-              Tab(icon: Icon(Icons.support_agent), text: 'Tickets'),
+              Tab(icon: const Icon(Icons.people), text: l10n.users),
+              Tab(icon: const Icon(Icons.support_agent), text: l10n.tickets),
             ],
-            indicatorColor: Color(0xFF00E5FF),
-            labelColor: Color(0xFF00E5FF),
+            indicatorColor: const Color(0xFF00E5FF),
+            labelColor: const Color(0xFF00E5FF),
             unselectedLabelColor: Colors.white70,
           ),
           actions: [
@@ -79,7 +80,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
             IconButton(
               icon: const Icon(Icons.logout),
               onPressed: _showLogoutDialog,
-              tooltip: 'Logout',
+              tooltip: l10n.logout,
             ),
             const SizedBox(width: 8),
           ],
@@ -89,7 +90,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
             // Tab 1: Users
             Column(
               children: [
-                _buildSearchBar(),
+                _buildSearchBar(l10n),
                 Expanded(
             child: StreamBuilder<List<UserModel>>(
               stream: _userService.getUsersStream(),
@@ -103,7 +104,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                 if (snapshot.hasError) {
                   return Center(
                     child: Text(
-                      'Error loading users: ${snapshot.error}',
+                      '${l10n.errorLoadingUsers}: ${snapshot.error}',
                       style: const TextStyle(color: Color(0xFFFF1744)),
                     ),
                   );
@@ -127,8 +128,8 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                   return Center(
                     child: Text(
                       _searchQuery.isEmpty
-                          ? 'No registered users found.'
-                          : 'No users matching "$_searchQuery"',
+                          ? l10n.noRegisteredUsers
+                          : l10n.noUsersMatching(_searchQuery),
                       style: TextStyle(color: Colors.grey[400]),
                     ),
                   );
@@ -139,7 +140,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                   itemCount: users.length,
                   itemBuilder: (context, index) {
                     final user = users[index];
-                    return _buildUserCard(context, user);
+                    return _buildUserCard(context, user, l10n);
                   },
                 );
               },
@@ -155,7 +156,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     );
   }
 
-  Widget _buildSearchBar() {
+  Widget _buildSearchBar(AppLocalizations l10n) {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -180,7 +181,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
         },
         style: const TextStyle(color: Colors.white),
         decoration: InputDecoration(
-          hintText: 'Search by username or ID...',
+          hintText: l10n.searchByUsernameOrId,
           hintStyle: TextStyle(color: Colors.grey[500]),
           border: InputBorder.none,
           icon: const Icon(Icons.search, color: Color(0xFF00E5FF)),
@@ -200,7 +201,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     );
   }
 
-  Widget _buildUserCard(BuildContext context, UserModel user) {
+  Widget _buildUserCard(BuildContext context, UserModel user, AppLocalizations l10n) {
     final bool isAdmin = user.isAdmin;
     final primaryColor = isAdmin
         ? const Color(0xFF00E676)
@@ -271,7 +272,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
-                      isAdmin ? 'ADMIN' : 'USER',
+                      isAdmin ? l10n.adminLabel : l10n.userLabel,
                       style: TextStyle(
                         color: primaryColor,
                         fontSize: 10,

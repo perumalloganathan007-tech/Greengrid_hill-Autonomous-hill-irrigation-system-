@@ -22,6 +22,12 @@ class AuthWrapper extends StatelessWidget {
             onLocaleChanged: onLocaleChanged,
             user: state.user,
           );
+        } else if (state is ProfileUpdated) {
+          return MainNavigation(
+            onThemeChanged: onThemeChanged,
+            onLocaleChanged: onLocaleChanged,
+            user: state.user,
+          );
         } else if (state is Unauthenticated) {
           return const LoginScreen();
         } else if (state is AuthInitial || state is AuthLoading) {

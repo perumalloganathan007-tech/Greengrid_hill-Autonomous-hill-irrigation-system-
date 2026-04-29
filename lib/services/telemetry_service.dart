@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:firebase_database/firebase_database.dart';
 import '../models/sensor_data.dart';
 import '../models/pump_status.dart';
+import '../models/environment_data.dart';
 import 'cache_service.dart';
 
 /// Service for real-time telemetry data streaming from Firebase
@@ -15,20 +16,26 @@ class TelemetryService {
   // StreamControllers for real-time data
   final _sensorDataController = StreamController<List<SensorData>>.broadcast();
   final _pumpStatusController = StreamController<List<PumpStatus>>.broadcast();
+  final _envDataController = StreamController<EnvironmentData>.broadcast();
 
   // Database references
   DatabaseReference? _sensorsRef;
   DatabaseReference? _pumpsRef;
+  DatabaseReference? _envRef;
 
   // Subscriptions
   StreamSubscription? _sensorSubscription;
   StreamSubscription? _pumpSubscription;
+  StreamSubscription? _envSubscription;
 
   TelemetryService({required this.userId}) {
     try {
       _database = FirebaseDatabase.instance;
-      _sensorsRef = _database!.ref('users/$userId/moisture_data'); // Corrected to match actual database structure
+      _sensorsRef = _database!.ref(
+        'users/$userId/moisture_data',
+      ); // Corrected to match actual database structure
       _pumpsRef = _database!.ref('pumps');
+      _envRef = _database!.ref('users/$userId/dht22_data');
       _useFirebase = true;
     } catch (e) {
       // Firebase not initialized, will use cache data
@@ -42,6 +49,10 @@ class TelemetryService {
   /// Stream of pump status updates
   Stream<List<PumpStatus>> get pumpStatusStream => _pumpStatusController.stream;
 
+  /// Stream of environment data updates (DHT22)
+  Stream<EnvironmentData> get environmentDataStream =>
+      _envDataController.stream;
+
   /// Start listening to real-time sensor data
   void startSensorMonitoring() {
     if (!_useFirebase || _sensorsRef == null) {
@@ -51,26 +62,29 @@ class TelemetryService {
     }
 
     try {
-      debugPrint('TelemetryService: Starting sensor monitor for users/$userId/moisture_data');
+      debugPrint(
+        'TelemetryService: Starting sensor monitor for users/$userId/moisture_data',
+      );
       // Listen to the user-specific moisture data directly
-      _sensorSubscription = _sensorsRef!.onValue.listen((event) {
-        final data = event.snapshot.value;
-        if (data != null && data is String) {
-          final sensors = _parseMoistureData(data);
-          if (sensors.isNotEmpty) {
-            _sensorDataController.add(sensors);
-            _cacheService.cacheSensors(sensors);
+      _sensorSubscription = _sensorsRef!.onValue.listen(
+        (event) {
+          final data = event.snapshot.value;
+          if (data != null && data is String) {
+            final sensors = _parseMoistureData(data);
+            if (sensors.isNotEmpty) {
+              _sensorDataController.add(sensors);
+              _cacheService.cacheSensors(sensors);
+            }
           }
-        }
-      }, onError: (error) {
-        debugPrint('TelemetryService ERROR (User Moisture Data): $error');
-      });
+        },
+        onError: (error) {
+          debugPrint('TelemetryService ERROR (User Moisture Data): $error');
+        },
+      );
     } catch (e) {
       debugPrint('TelemetryService: Exception during sensor monitor setup: $e');
     }
   }
-
-
 
   /// Parse moisture data from format "T1:12:30.5,T2:37:25.0" or "T1:12,T2:37"
   List<SensorData> _parseMoistureData(String data) {
@@ -121,24 +135,57 @@ class TelemetryService {
     }
 
     try {
-      _pumpSubscription = _pumpsRef!.onValue.listen((event) {
-        final data = event.snapshot.value;
-        if (data != null && data is Map) {
-          final List<PumpStatus> pumps = [];
-          data.forEach((key, value) {
-            if (value is Map) {
-              final mapValue = Map<String, dynamic>.from(value);
-              mapValue['pumpId'] ??= key;
-              pumps.add(PumpStatus.fromJson(mapValue));
-            }
-          });
-          _pumpStatusController.add(pumps);
-        }
-      }, onError: (error) {
-        debugPrint('TelemetryService ERROR (Pumps): $error');
-      });
+      _pumpSubscription = _pumpsRef!.onValue.listen(
+        (event) {
+          final data = event.snapshot.value;
+          if (data != null && data is Map) {
+            final List<PumpStatus> pumps = [];
+            data.forEach((key, value) {
+              if (value is Map) {
+                final mapValue = Map<String, dynamic>.from(value);
+                mapValue['pumpId'] ??= key;
+                pumps.add(PumpStatus.fromJson(mapValue));
+              }
+            });
+            _pumpStatusController.add(pumps);
+          }
+        },
+        onError: (error) {
+          debugPrint('TelemetryService ERROR (Pumps): $error');
+        },
+      );
     } catch (e) {
       debugPrint('TelemetryService: Exception during pump monitor setup: $e');
+    }
+  }
+
+  /// Start listening to real-time environment data (DHT22)
+  void startEnvironmentMonitoring() {
+    if (!_useFirebase || _envRef == null) return;
+
+    try {
+      _envSubscription = _envRef!.onValue.listen(
+        (event) {
+          final data = event.snapshot.value;
+          if (data != null && data is Map) {
+            try {
+              final envData = EnvironmentData.fromJson(
+                Map<String, dynamic>.from(data),
+              );
+              _envDataController.add(envData);
+            } catch (e) {
+              debugPrint('TelemetryService: Failed to parse DHT22 data: $e');
+            }
+          }
+        },
+        onError: (error) {
+          debugPrint('TelemetryService ERROR (Environment Data): $error');
+        },
+      );
+    } catch (e) {
+      debugPrint(
+        'TelemetryService: Exception during environment monitor setup: $e',
+      );
     }
   }
 
@@ -148,7 +195,9 @@ class TelemetryService {
 
     try {
       final snapshot = await _sensorsRef!.get();
-      if (snapshot.exists && snapshot.value != null && snapshot.value is String) {
+      if (snapshot.exists &&
+          snapshot.value != null &&
+          snapshot.value is String) {
         final dataStr = snapshot.value as String;
         final sensors = _parseMoistureData(dataStr);
         try {
@@ -168,8 +217,10 @@ class TelemetryService {
   void dispose() {
     _sensorSubscription?.cancel();
     _pumpSubscription?.cancel();
+    _envSubscription?.cancel();
     _sensorDataController.close();
     _pumpStatusController.close();
+    _envDataController.close();
   }
 
   /// Load cached sensors for offline mode

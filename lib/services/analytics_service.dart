@@ -1,6 +1,6 @@
 import 'package:firebase_database/firebase_database.dart';
 import 'package:intl/intl.dart';
-import 'dart:math' as math;
+
 import '../models/water_usage.dart';
 import '../models/environment_data.dart';
 
@@ -279,40 +279,42 @@ class AnalyticsService {
     return {'average': average, 'min': min, 'max': max, 'total': total};
   }
 
-  /// Get historical environment data (Mocked until Firebase history is implemented)
+  /// Get historical environment data from Firebase
   Future<List<EnvironmentData>> getEnvironmentHistory({
     required DateTime startDate,
     required DateTime endDate,
   }) async {
-    final List<EnvironmentData> data = [];
-    final random = math.Random();
-    DateTime current = startDate;
-
-    // Generate data points every 4 hours
-    while (current.isBefore(endDate)) {
-      // Simulate diurnal temperature variation
-      final hour = current.hour;
-      double baseTemp = 24.0;
-      if (hour > 10 && hour < 16) {
-        baseTemp += 5 + random.nextDouble() * 3; // Hotter in afternoon
-      } else if (hour < 6 || hour > 20) {
-        baseTemp -= 3 + random.nextDouble() * 2; // Cooler at night
-      } else {
-        baseTemp += random.nextDouble() * 2;
-      }
-
-      // Humidity generally inverse to temperature
-      double baseHum = 80.0 - (baseTemp - 20) * 2 + random.nextDouble() * 5;
-
-      data.add(
-        EnvironmentData(
-          temperature: baseTemp,
-          humidity: baseHum.clamp(0.0, 100.0),
-          timestamp: current,
-        ),
-      );
-      current = current.add(const Duration(hours: 4));
+    if (!_useFirebase || _database == null || userId.isEmpty) {
+      return [];
     }
-    return data;
+
+    try {
+      final snapshot = await _database!
+          .ref('users/$userId/environment_history')
+          .orderByChild('timestamp')
+          .startAt(startDate.toIso8601String())
+          .endAt(endDate.toIso8601String())
+          .get();
+
+      if (snapshot.exists && snapshot.value != null) {
+        final data = snapshot.value as Map;
+        final List<EnvironmentData> envList = [];
+
+        data.forEach((key, value) {
+          if (value is Map) {
+            envList.add(
+              EnvironmentData.fromJson(Map<String, dynamic>.from(value)),
+            );
+          }
+        });
+
+        // Sort by timestamp
+        envList.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+        return envList;
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
   }
 }

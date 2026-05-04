@@ -170,14 +170,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                   children: [
                     _buildPeriodSelector(),
                     const SizedBox(height: 20),
-                    if (_weeklyData.isEmpty)
-                      Padding(
-                        padding: const EdgeInsets.all(32.0),
-                        child: Center(
-                          child: Text(AppLocalizations.of(context)!.noSensorsFound),
-                        ),
-                      )
-                    else ...[
+
                       if (_selectedPeriod == 'Day' && _pumps.isNotEmpty) ...[
                         _buildSectionHeader(AppLocalizations.of(context)!.realTimeFlowMonitoring),
                         const SizedBox(height: 12),
@@ -220,7 +213,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                         const SizedBox(height: 8),
                         _buildActivationChart(),
                       ],
-                    ],
+
                   ],
                 ),
               ),

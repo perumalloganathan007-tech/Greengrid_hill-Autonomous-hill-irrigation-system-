@@ -180,8 +180,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     try {
       if (state is! Authenticated) return;
 
-      emit(const AuthLoading());
-
       await _authService.updateDisplayName(event.displayName);
 
       // Log the change
@@ -218,8 +216,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     try {
       if (state is! Authenticated) return;
-
-      emit(const AuthLoading());
 
       await _authService.updatePassword(event.newPassword);
 
